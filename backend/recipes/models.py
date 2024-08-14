@@ -46,6 +46,12 @@ class User(AbstractUser):
         max_length=MAX_LENGTH_EMAIL,
         unique=True
     )
+    avatar = models.ImageField(
+        upload_to='avatars/',
+        verbose_name='Аватар',
+        null=True,
+        default=None
+    )
 
     @property
     def is_admin(self):
