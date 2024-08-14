@@ -1,12 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator
 from .validators import validate_username
 
 
+MIN_AMOUNT = 1
+MIN_COOKING_TIME = 1
 MAX_LENGTH_EMAIL = 254
 MAX_LENGTH_NAME = 256
 MAX_LENGTH_SLUG = 50
 MAX_LENGTH_USERNAME = 150
+MAX_UNIT_LENGTH = 16
+
+INVALID_AMOUNT = f'Хотя бы {MIN_AMOUNT} ед. выбранного ингредиента!'
+INVALID_COOKING_TIME = f'Хотя бы {MIN_COOKING_TIME} мин. готовки!'
 
 
 class Role(models.TextChoices):
@@ -59,3 +66,75 @@ class User(AbstractUser):
 
     class Meta:
         ordering = ('username',)
+
+
+class BaseNameModel(models.Model):
+    name = models.CharField(
+        verbose_name='Название',
+        max_length=MAX_LENGTH_NAME,
+        help_text=HelpText.NAME,
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ('name',)
+        default_related_name = '%(class)ss'
+
+
+class Tag(BaseNameModel):
+    slug = models.SlugField(
+        verbose_name='Идентификатор',
+        max_length=MAX_LENGTH_SLUG,
+        unique=True,
+        help_text=HelpText.SLUG,
+    )
+
+
+class Ingredient(BaseNameModel):
+    measurement_unit = models.CharField(
+        verbose_name='Единица измерения',
+        max_length=MAX_UNIT_LENGTH,
+    )
+
+
+class Recipe(BaseNameModel):
+    author = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор'
+    )
+    image = models.ImageField(upload_to='recipes/images')
+    text = models.TextField(verbose_name='Описание')
+    ingredients = models.ManyToManyField(
+        to=Ingredient,
+        through='IngredientRecipe',
+    )
+    tag = models.ManyToManyField(to=Tag)
+    cooking_time = models.PositiveIntegerField(
+        verbose_name='Время приготовления в минутах',
+        validators=[
+            MinValueValidator(
+                limit_value=MIN_COOKING_TIME,
+                message=INVALID_COOKING_TIME
+            )
+        ]
+    )
+
+
+class IngredientRecipe(models.Model):
+    recipe = models.ForeignKey(
+        to=Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт'
+    )
+    ingredient = models.ForeignKey(
+        to=Ingredient,
+        on_delete=models.CASCADE,
+        verbose_name='Ингредиент'
+    )
+    amount = models.PositiveIntegerField(
+        verbose_name='Количество',
+        validators=[
+            MinValueValidator(limit_value=MIN_AMOUNT, message=INVALID_AMOUNT),
+        ]
+    )
