@@ -155,9 +155,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
 }
 
-# Раскомментировать после написания кастомной модели User
-# AUTH_USER_MODEL = 'reviews.User'
-
+AUTH_USER_MODEL = 'recipes.User'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
