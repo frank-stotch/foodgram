@@ -54,8 +54,8 @@ class User(AbstractUser):
         unique=True
     )
     avatar = models.ImageField(
-        upload_to='avatars/',
-        verbose_name='Аватар',
+        upload_to='users/avatars',
+        verbose_name='Фото профиля',
         null=True,
         default=None
     )
@@ -65,6 +65,8 @@ class User(AbstractUser):
         return self.role == Role.admin or self.is_staff
 
     class Meta:
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
         ordering = ('username',)
 
 
@@ -90,12 +92,20 @@ class Tag(BaseNameModel):
         help_text=HelpText.SLUG,
     )
 
+    class Meta(BaseNameModel.Meta):
+        verbose_name = 'Тег'
+        verbose_name_plural = 'Теги'
+
 
 class Ingredient(BaseNameModel):
     measurement_unit = models.CharField(
         verbose_name='Единица измерения',
         max_length=MAX_UNIT_LENGTH,
     )
+
+    class Meta(BaseNameModel.Meta):
+        verbose_name = 'Ингредиент'
+        verbose_name_plural = 'Ингредиенты'
 
 
 class Recipe(BaseNameModel):
@@ -126,6 +136,8 @@ class Recipe(BaseNameModel):
     )
 
     class Meta(BaseNameModel.Meta):
+        verbose_name = 'Рецепт'
+        verbose_name_plural = 'Рецепты'
         ordering = ('-pub_date',)
 
 
@@ -149,4 +161,66 @@ class IngredientRecipe(models.Model):
 
     class Meta:
         ordering = ('recipe', 'ingredient')
+
+
+class BaseUserRecipeModel(models.Model):
+    user = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор'
+    )
+    recipe = models.ForeignKey(
+        to=Recipe,
+        on_delete=models.CASCADE,
+        verbose_name='Рецепт'
+    )
+
+    class Meta:
+        abstract = True
+        ordering = ('user', 'recipe')
         default_related_name = '%(class)ss'
+
+
+class Favorite(BaseUserRecipeModel):
+
+    class Meta(BaseUserRecipeModel):
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+
+
+class Follow(models.Model):
+    author = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        related_name='followers'
+    )
+    follower = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        related_name='followed'
+    )
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+        ordering = ('user',)
+        unique_together = ('author', 'follower')
+        constraints = [
+            models.CheckConstraint(
+                check=~models.Q(author=models.F('follower')),
+                name='you_cant_follow_yourself',
+            )
+        ]
+
+
+class ShoppingList(BaseUserRecipeModel):
+
+    class Meta(BaseUserRecipeModel.Meta):
+        verbose_name = 'Список покупок'
+        verbose_name_plural = 'Списки покупок'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'recipe'],
+                name='you already have this recipe on the list'
+            )
+        ]
