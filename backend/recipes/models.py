@@ -73,6 +73,7 @@ class BaseNameModel(models.Model):
         verbose_name='Название',
         max_length=MAX_LENGTH_NAME,
         help_text=HelpText.NAME,
+        unique=True
     )
 
     class Meta:
@@ -119,6 +120,13 @@ class Recipe(BaseNameModel):
             )
         ]
     )
+    pub_date = models.DateTimeField(
+        verbose_name='Дата публикации',
+        auto_now_add=True
+    )
+
+    class Meta(BaseNameModel.Meta):
+        ordering = ('-pub_date',)
 
 
 class IngredientRecipe(models.Model):
@@ -138,3 +146,7 @@ class IngredientRecipe(models.Model):
             MinValueValidator(limit_value=MIN_AMOUNT, message=INVALID_AMOUNT),
         ]
     )
+
+    class Meta:
+        ordering = ('recipe', 'ingredient')
+        default_related_name = '%(class)ss'
