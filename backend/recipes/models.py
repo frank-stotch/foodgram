@@ -221,7 +221,7 @@ class Subscription(models.Model):
         ]
 
 
-class ShoppingList(BaseUserRecipeModel):
+class ShoppingCart(BaseUserRecipeModel):
     class Meta(BaseUserRecipeModel.Meta):
         verbose_name = "Список покупок"
         verbose_name_plural = "Списки покупок"
