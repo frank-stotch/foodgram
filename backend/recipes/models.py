@@ -4,41 +4,59 @@ from django.core.validators import MinValueValidator
 from .validators import validate_username
 
 
-MIN_AMOUNT = 1
-MIN_COOKING_TIME = 1
-MAX_LENGTH_EMAIL = 254
-MAX_LENGTH_NAME = 256
-MAX_LENGTH_SLUG = 50
-MAX_LENGTH_USERNAME = 150
-MAX_UNIT_LENGTH = 16
+class Minimum:
+    AMOUNT = 1
+    COOKING_TIME = 1
 
-INVALID_AMOUNT = f"Хотя бы {MIN_AMOUNT} ед. выбранного ингредиента!"
-INVALID_COOKING_TIME = f"Хотя бы {MIN_COOKING_TIME} мин. готовки!"
+
+class MaxLength:
+    EMAIL = 254
+    NAME = 256
+    SLUG = 50
+    USERNAME = 150
+    UNIT = 16
+    ANTHROPONYM = 150
+    PASSWORD = 128
 
 
 class HelpText:
-    NAME = f"Не более {MAX_LENGTH_NAME} символов"
-    SLUG = f"Не более {MAX_LENGTH_SLUG} символов. Обязан быть уникальным"
+    NAME = f"Не более {MaxLength.EMAIL} символов"
+    SLUG = f"Не более {MaxLength.SLUG} символов. Обязан быть уникальным"
     USERNAME = (
-        f"Максимум {MAX_LENGTH_USERNAME} символов. Допускаются "
+        f"Максимум {MaxLength.USERNAME} символов. Допускаются "
         "буквы, цифры и символы @/./+/- ."
     )
+
+
+class InvalidMessage:
+    AMOUNT = f"Хотя бы {Minimum.AMOUNT} ед. выбранного ингредиента!"
+    COOKING_TIME = f"Хотя бы {Minimum.COOKING_TIME} мин. готовки!"
 
 
 class User(AbstractUser):
     username = models.CharField(
         verbose_name="Имя пользователя",
-        max_length=MAX_LENGTH_USERNAME,
+        max_length=MaxLength.USERNAME,
         help_text=HelpText.USERNAME,
         unique=True,
         validators=[
             validate_username,
         ],
+        null=False,
+        blank=False,
+    )
+    password = models.CharField(
+        verbose_name="Пароль",
+        null=False,
+        blank=False,
+        max_length=MaxLength.PASSWORD,
     )
     email = models.EmailField(
         verbose_name="Электронная почта",
-        max_length=MAX_LENGTH_EMAIL,
+        max_length=MaxLength.EMAIL,
         unique=True,
+        null=False,
+        blank=False,
     )
     avatar = models.ImageField(
         upload_to="users/",
@@ -46,6 +64,26 @@ class User(AbstractUser):
         null=True,
         default=None,
     )
+    first_name = models.CharField(
+        verbose_name="Имя",
+        max_length=MaxLength.ANTHROPONYM,
+        blank=False,
+        null=False,
+    )
+    last_name = models.CharField(
+        verbose_name="Фамилия",
+        max_length=MaxLength.ANTHROPONYM,
+        blank=False,
+        null=False,
+    )
+
+    REQUIRED_FIELDS = [
+        "username",
+        "password",
+        "email",
+        "first_name",
+        "last_name",
+    ]
 
     class Meta:
         verbose_name = "Пользователь"
@@ -56,7 +94,7 @@ class User(AbstractUser):
 class BaseNameModel(models.Model):
     name = models.CharField(
         verbose_name="Название",
-        max_length=MAX_LENGTH_NAME,
+        max_length=MaxLength.NAME,
         help_text=HelpText.NAME,
         unique=True,
     )
@@ -70,7 +108,7 @@ class BaseNameModel(models.Model):
 class Tag(BaseNameModel):
     slug = models.SlugField(
         verbose_name="Идентификатор",
-        max_length=MAX_LENGTH_SLUG,
+        max_length=MaxLength.SLUG,
         unique=True,
         help_text=HelpText.SLUG,
     )
@@ -83,7 +121,7 @@ class Tag(BaseNameModel):
 class Ingredient(BaseNameModel):
     unit = models.CharField(
         verbose_name="Единица измерения",
-        max_length=MAX_UNIT_LENGTH,
+        max_length=MaxLength.UNIT,
     )
 
     class Meta(BaseNameModel.Meta):
@@ -102,7 +140,8 @@ class Recipe(BaseNameModel):
         verbose_name="Время приготовления в минутах",
         validators=[
             MinValueValidator(
-                limit_value=MIN_COOKING_TIME, message=INVALID_COOKING_TIME
+                limit_value=Minimum.COOKING_TIME,
+                message=InvalidMessage.COOKING_TIME,
             )
         ],
     )
@@ -129,7 +168,10 @@ class IngredientRecipe(models.Model):
     amount = models.PositiveIntegerField(
         verbose_name="Количество",
         validators=[
-            MinValueValidator(limit_value=MIN_AMOUNT, message=INVALID_AMOUNT),
+            MinValueValidator(
+                limit_value=Minimum.AMOUNT,
+                message=InvalidMessage.COOKING_TIME,
+            ),
         ],
     )
 
