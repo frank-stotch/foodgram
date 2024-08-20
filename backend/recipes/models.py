@@ -4,223 +4,230 @@ from django.core.validators import MinValueValidator
 from .validators import validate_username
 
 
-MIN_AMOUNT = 1
-MIN_COOKING_TIME = 1
-MAX_LENGTH_EMAIL = 254
-MAX_LENGTH_NAME = 256
-MAX_LENGTH_SLUG = 50
-MAX_LENGTH_USERNAME = 150
-MAX_UNIT_LENGTH = 16
-
-INVALID_AMOUNT = f'Хотя бы {MIN_AMOUNT} ед. выбранного ингредиента!'
-INVALID_COOKING_TIME = f'Хотя бы {MIN_COOKING_TIME} мин. готовки!'
+class Minimum:
+    AMOUNT = 1
+    COOKING_TIME = 1
 
 
-class Role(models.TextChoices):
-    user = ('user', 'Пользователь')
-    admin = ('admin', 'Администратор')
+class MaxLength:
+    EMAIL = 254
+    NAME = 256
+    SLUG = 50
+    USERNAME = 150
+    UNIT = 16
+    ANTHROPONYM = 150
+    PASSWORD = 128
 
 
 class HelpText:
-    NAME = f'Не более {MAX_LENGTH_NAME} символов'
-    SLUG = (
-        f'Не более {MAX_LENGTH_SLUG} символов. Обязан быть уникальным'
-    )
+    NAME = f"Не более {MaxLength.EMAIL} символов"
+    SLUG = f"Не более {MaxLength.SLUG} символов. Обязан быть уникальным"
     USERNAME = (
-        f'Максимум {MAX_LENGTH_USERNAME} символов. Допускаются '
-        'буквы, цифры и символы @/./+/- .'
+        f"Максимум {MaxLength.USERNAME} символов. Допускаются "
+        "буквы, цифры и символы @/./+/- ."
     )
+
+
+class InvalidMessage:
+    AMOUNT = f"Хотя бы {Minimum.AMOUNT} ед. выбранного ингредиента!"
+    COOKING_TIME = f"Хотя бы {Minimum.COOKING_TIME} мин. готовки!"
 
 
 class User(AbstractUser):
     username = models.CharField(
-        verbose_name='Имя пользователя',
-        max_length=MAX_LENGTH_USERNAME,
+        verbose_name="Имя пользователя",
+        max_length=MaxLength.USERNAME,
         help_text=HelpText.USERNAME,
         unique=True,
         validators=[
             validate_username,
         ],
+        null=False,
+        blank=False,
     )
-    role = models.CharField(
-        verbose_name='Роль',
-        max_length=max(len(choice) for choice in list(Role)),
-        choices=Role.choices,
-        default=Role.user,
+    password = models.CharField(
+        verbose_name="Пароль",
+        null=False,
+        blank=False,
+        max_length=MaxLength.PASSWORD,
     )
     email = models.EmailField(
-        verbose_name='Электронная почта',
-        max_length=MAX_LENGTH_EMAIL,
-        unique=True
+        verbose_name="Электронная почта",
+        max_length=MaxLength.EMAIL,
+        unique=True,
+        null=False,
+        blank=False,
     )
     avatar = models.ImageField(
-        upload_to='users/avatars',
-        verbose_name='Фото профиля',
+        upload_to="users/",
+        verbose_name="Фото профиля",
         null=True,
-        default=None
+        default=None,
+    )
+    first_name = models.CharField(
+        verbose_name="Имя",
+        max_length=MaxLength.ANTHROPONYM,
+        blank=False,
+        null=False,
+    )
+    last_name = models.CharField(
+        verbose_name="Фамилия",
+        max_length=MaxLength.ANTHROPONYM,
+        blank=False,
+        null=False,
     )
 
-    @property
-    def is_admin(self):
-        return self.role == Role.admin or self.is_staff
+    REQUIRED_FIELDS = [
+        "username",
+        "password",
+        "email",
+        "first_name",
+        "last_name",
+    ]
 
     class Meta:
-        verbose_name = 'Пользователь'
-        verbose_name_plural = 'Пользователи'
-        ordering = ('username',)
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
+        ordering = ("username",)
 
 
 class BaseNameModel(models.Model):
     name = models.CharField(
-        verbose_name='Название',
-        max_length=MAX_LENGTH_NAME,
+        verbose_name="Название",
+        max_length=MaxLength.NAME,
         help_text=HelpText.NAME,
-        unique=True
+        unique=True,
     )
 
     class Meta:
         abstract = True
-        ordering = ('name',)
-        default_related_name = '%(class)ss'
+        ordering = ("name",)
+        default_related_name = "%(class)ss"
 
 
 class Tag(BaseNameModel):
     slug = models.SlugField(
-        verbose_name='Идентификатор',
-        max_length=MAX_LENGTH_SLUG,
+        verbose_name="Идентификатор",
+        max_length=MaxLength.SLUG,
         unique=True,
         help_text=HelpText.SLUG,
     )
 
     class Meta(BaseNameModel.Meta):
-        verbose_name = 'Тег'
-        verbose_name_plural = 'Теги'
+        verbose_name = "Тег"
+        verbose_name_plural = "Теги"
 
 
 class Ingredient(BaseNameModel):
-    measurement_unit = models.CharField(
-        verbose_name='Единица измерения',
-        max_length=MAX_UNIT_LENGTH,
+    unit = models.CharField(
+        verbose_name="Единица измерения",
+        max_length=MaxLength.UNIT,
     )
 
     class Meta(BaseNameModel.Meta):
-        verbose_name = 'Ингредиент'
-        verbose_name_plural = 'Ингредиенты'
+        verbose_name = "Ингредиент"
+        verbose_name_plural = "Ингредиенты"
 
 
 class Recipe(BaseNameModel):
     author = models.ForeignKey(
-        to=User,
-        on_delete=models.CASCADE,
-        verbose_name='Автор'
+        to=User, on_delete=models.CASCADE, verbose_name="Автор"
     )
-    image = models.ImageField(upload_to='recipes/images')
-    text = models.TextField(verbose_name='Описание')
-    ingredients = models.ManyToManyField(
-        to=Ingredient,
-        through='IngredientRecipe',
-    )
+    image = models.ImageField(upload_to="recipes/images")
+    text = models.TextField(verbose_name="Описание")
     tag = models.ManyToManyField(to=Tag)
     cooking_time = models.PositiveIntegerField(
-        verbose_name='Время приготовления в минутах',
+        verbose_name="Время приготовления в минутах",
         validators=[
             MinValueValidator(
-                limit_value=MIN_COOKING_TIME,
-                message=INVALID_COOKING_TIME
+                limit_value=Minimum.COOKING_TIME,
+                message=InvalidMessage.COOKING_TIME,
             )
-        ]
+        ],
     )
     pub_date = models.DateTimeField(
-        verbose_name='Дата публикации',
-        auto_now_add=True
+        verbose_name="Дата публикации", auto_now_add=True
     )
 
     class Meta(BaseNameModel.Meta):
-        verbose_name = 'Рецепт'
-        verbose_name_plural = 'Рецепты'
-        ordering = ('-pub_date',)
+        verbose_name = "Рецепт"
+        verbose_name_plural = "Рецепты"
+        ordering = ("-pub_date",)
 
 
 class IngredientRecipe(models.Model):
     recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
-        verbose_name='Рецепт'
+        verbose_name="Рецепт",
+        related_name="ingredient",
     )
     ingredient = models.ForeignKey(
-        to=Ingredient,
-        on_delete=models.CASCADE,
-        verbose_name='Ингредиент'
+        to=Ingredient, on_delete=models.CASCADE, verbose_name="Ингредиент"
     )
     amount = models.PositiveIntegerField(
-        verbose_name='Количество',
+        verbose_name="Количество",
         validators=[
-            MinValueValidator(limit_value=MIN_AMOUNT, message=INVALID_AMOUNT),
-        ]
+            MinValueValidator(
+                limit_value=Minimum.AMOUNT,
+                message=InvalidMessage.COOKING_TIME,
+            ),
+        ],
     )
 
     class Meta:
-        ordering = ('recipe', 'ingredient')
+        ordering = ("recipe", "ingredient")
+        default_related_name = "%(class)ss"
 
 
 class BaseUserRecipeModel(models.Model):
     user = models.ForeignKey(
-        to=User,
-        on_delete=models.CASCADE,
-        verbose_name='Автор'
+        to=User, on_delete=models.CASCADE, verbose_name="Автор"
     )
     recipe = models.ForeignKey(
-        to=Recipe,
-        on_delete=models.CASCADE,
-        verbose_name='Рецепт'
+        to=Recipe, on_delete=models.CASCADE, verbose_name="Рецепт"
     )
 
     class Meta:
         abstract = True
-        ordering = ('user', 'recipe')
-        default_related_name = '%(class)ss'
+        ordering = ("user", "recipe")
+        default_related_name = "%(class)ss"
 
 
 class Favorite(BaseUserRecipeModel):
-
     class Meta(BaseUserRecipeModel):
-        verbose_name = 'Избранное'
-        verbose_name_plural = 'Избранное'
+        verbose_name = "Избранное"
+        verbose_name_plural = "Избранное"
 
 
-class Follow(models.Model):
+class Subscription(models.Model):
     author = models.ForeignKey(
-        to=User,
-        on_delete=models.CASCADE,
-        related_name='followers'
+        to=User, on_delete=models.CASCADE, related_name="authors"
     )
-    follower = models.ForeignKey(
-        to=User,
-        on_delete=models.CASCADE,
-        related_name='followed'
+    subscriber = models.ForeignKey(
+        to=User, on_delete=models.CASCADE, related_name="subscribers"
     )
 
     class Meta:
-        verbose_name = 'Подписка'
-        verbose_name_plural = 'Подписки'
-        ordering = ('user',)
-        unique_together = ('author', 'follower')
+        verbose_name = "Подписка"
+        verbose_name_plural = "Подписки"
+        ordering = ("subscriber", "author")
+        unique_together = ("author", "subscriber")
         constraints = [
             models.CheckConstraint(
-                check=~models.Q(author=models.F('follower')),
-                name='you_cant_follow_yourself',
+                check=~models.Q(author=models.F("subscriber")),
+                name="you_cant_subscribe_to_yourself",
             )
         ]
 
 
 class ShoppingList(BaseUserRecipeModel):
-
     class Meta(BaseUserRecipeModel.Meta):
-        verbose_name = 'Список покупок'
-        verbose_name_plural = 'Списки покупок'
+        verbose_name = "Список покупок"
+        verbose_name_plural = "Списки покупок"
         constraints = [
             models.UniqueConstraint(
-                fields=['user', 'recipe'],
-                name='you already have this recipe on the list'
+                fields=["user", "recipe"],
+                name="you already have this recipe on the list",
             )
         ]
