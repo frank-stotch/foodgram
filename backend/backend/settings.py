@@ -42,6 +42,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'djoser',
+    'api',
+    'recipes',
 ]
 
 MIDDLEWARE = [
@@ -150,7 +152,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',  # добавить настройку, отвечающую за получение токена по логину и паролю
+        'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
 }
@@ -165,10 +167,18 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
 ]
 
-EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
-
-EMAIL_FILE_PATH = './email'
-
 USERNAME_PATTERN = r'[\w.@+-]+\z'
 
 FORBIDDEN_USERNAMES = ('me',)
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'SERIALIZERS': {
+        'user': 'api.serializers.UserSerializer',
+        'current_user': 'api.serializers.UserSerializer',
+        'user_create': 'api.serializers.UserCreateSerializer',
+    },
+    'PERMISSIONS': {
+        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly']
+    }
+}
