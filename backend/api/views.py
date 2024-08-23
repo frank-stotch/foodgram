@@ -1,7 +1,23 @@
-from rest_framework import filters, viewsets
+from django.contrib.auth import get_user_model
+from rest_framework import viewsets
 
-from recipes.models import Ingredient, Tag
-from .serializers import IngredientSerializer, TagSerializer
+from recipes.models import Ingredient, Recipe, Tag
+from .serializers import (
+    AvatarSerializer,
+    IngredientSerializer,
+    ReadRecipeSerializer,
+    TagSerializer,
+    WriteRecipeSerializer,
+)
+
+
+User = get_user_model()
+
+
+class AvatarViewSet(viewsets.ModelViewSet):
+    http_method_names = ["put", "delete"]
+    queryset = User.objects.all()
+    serializer_class = AvatarSerializer
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -18,4 +34,19 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RecipeViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "delete"]
-    
+    queryset = (
+        Recipe.objects.prefetch_related("tags", "ingredients")
+        .select_related("author")
+        .all()
+    )
+
+    def get_serializer_class(self):
+        if self.request.method in ["POST", "PATCH"]:
+            return WriteRecipeSerializer
+        return ReadRecipeSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(author=self.request.user)

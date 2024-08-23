@@ -140,7 +140,8 @@ class Recipe(BaseNameModel):
         to=User, on_delete=models.CASCADE, verbose_name="Автор"
     )
     image = models.ImageField(
-        verbose_name="Изображение", upload_to="recipes/images"
+        verbose_name="Изображение",
+        upload_to="recipes/images",
     )
     text = models.TextField(verbose_name="Описание")
     tag = models.ManyToManyField(
