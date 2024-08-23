@@ -90,6 +90,9 @@ class User(AbstractUser):
         verbose_name_plural = "Пользователи"
         ordering = ("username",)
 
+    def __str__(self):
+        return self.username
+
 
 class BaseNameModel(models.Model):
     name = models.CharField(
@@ -103,6 +106,9 @@ class BaseNameModel(models.Model):
         abstract = True
         ordering = ("name",)
         default_related_name = "%(class)ss"
+
+    def __str__(self):
+        return self.name
 
 
 class Tag(BaseNameModel):
@@ -119,7 +125,7 @@ class Tag(BaseNameModel):
 
 
 class Ingredient(BaseNameModel):
-    unit = models.CharField(
+    measurement_unit = models.CharField(
         verbose_name="Единица измерения",
         max_length=MaxLength.UNIT,
     )
@@ -133,9 +139,13 @@ class Recipe(BaseNameModel):
     author = models.ForeignKey(
         to=User, on_delete=models.CASCADE, verbose_name="Автор"
     )
-    image = models.ImageField(upload_to="recipes/images")
+    image = models.ImageField(
+        verbose_name="Изображение", upload_to="recipes/images"
+    )
     text = models.TextField(verbose_name="Описание")
-    tag = models.ManyToManyField(to=Tag)
+    tag = models.ManyToManyField(
+        to=Tag, through="TagRecipe", verbose_name="Тег"
+    )
     cooking_time = models.PositiveIntegerField(
         verbose_name="Время приготовления в минутах",
         validators=[
@@ -148,6 +158,9 @@ class Recipe(BaseNameModel):
     pub_date = models.DateTimeField(
         verbose_name="Дата публикации", auto_now_add=True
     )
+    ingredients = models.ManyToManyField(
+        to=Ingredient, through="IngredientRecipe"
+    )
 
     class Meta(BaseNameModel.Meta):
         verbose_name = "Рецепт"
@@ -155,12 +168,24 @@ class Recipe(BaseNameModel):
         ordering = ("-pub_date",)
 
 
+class TagRecipe(models.Model):
+    tag = models.ForeignKey(to=Tag, on_delete=models.SET_NULL)
+    recipe = models.ForeignKey(to=Recipe, on_delete=models.CASCADE)
+
+    class Meta:
+        default_related_name = "%(class)ss"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tag", "recipe"], name="you_already_have_this_tag"
+            )
+        ]
+
+
 class IngredientRecipe(models.Model):
     recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
         verbose_name="Рецепт",
-        related_name="ingredient",
     )
     ingredient = models.ForeignKey(
         to=Ingredient, on_delete=models.CASCADE, verbose_name="Ингредиент"
@@ -178,6 +203,15 @@ class IngredientRecipe(models.Model):
     class Meta:
         ordering = ("recipe", "ingredient")
         default_related_name = "%(class)ss"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["recipe", "ingredient"],
+                name="you_already_have_this_ingredient",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.recipe} {self.ingredient} {self.amount}"
 
 
 class BaseUserRecipeModel(models.Model):
@@ -192,6 +226,9 @@ class BaseUserRecipeModel(models.Model):
         abstract = True
         ordering = ("user", "recipe")
         default_related_name = "%(class)ss"
+
+    def __str__(self):
+        return f"{self.user} {self.recipe}"
 
 
 class Favorite(BaseUserRecipeModel):
@@ -212,13 +249,19 @@ class Subscription(models.Model):
         verbose_name = "Подписка"
         verbose_name_plural = "Подписки"
         ordering = ("subscriber", "author")
-        unique_together = ("author", "subscriber")
         constraints = [
+            models.UniqueConstraint(
+                fields=["author", "subscriber"],
+                name="you_already_have_this_subscription",
+            ),
             models.CheckConstraint(
                 check=~models.Q(author=models.F("subscriber")),
-                name="you_cant_subscribe_to_yourself",
-            )
+                name="you_can't_subscribe_to_yourself",
+            ),
         ]
+
+    def __str__(self):
+        return f"{self.subscriber} {self.author}"
 
 
 class ShoppingCart(BaseUserRecipeModel):

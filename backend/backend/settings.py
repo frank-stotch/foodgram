@@ -99,6 +99,7 @@ else:
             "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
             "HOST": os.getenv("POSTGRES_DB_HOST", "db"),
             "PORT": os.getenv("POSTGRES_DB_PORT", 5432),
+            'ATOMIC_REQUESTS': True,
         }
     }
 
