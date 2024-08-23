@@ -217,23 +217,27 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         return image
 
     @transaction.atomic
-    def create(self, validated_data):
-        ingredients = validated_data.pop("ingredients")
-        tags = validated_data.pop("tags")
-        recipe = Recipe.objects.create(**validated_data)
+    def _save_tags_and_ingredients(self, recipe, tags, ingredients):
         TagRecipe.objects.bulk_create(
             [TagRecipe(tag=tag, recipe=recipe) for tag in tags]
         )
         IngredientRecipe.objects.bulk_create(
             [
                 IngredientRecipe(
-                    ingredient=ingredient_id,
+                    ingredient=ingredient,
                     recipe=recipe,
-                    amount=ingredient["amount"],
+                    amount=ingredient.get("amount"),
                 )
                 for ingredient in ingredients
             ]
         )
+
+    @transaction.atomic
+    def create(self, validated_data):
+        ingredients = validated_data.pop("ingredients")
+        tags = validated_data.pop("tags")
+        recipe = Recipe.objects.create(**validated_data)
+        self._save_tags_and_ingredients(recipe, tags, ingredients)
         return recipe
 
     @transaction.atomic
@@ -243,19 +247,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         recipe = super().update(recipe, validated_data)
         recipe.ingredientrecipes.clear()
         recipe.tags.clear()
-        TagRecipe.objects.bulk_create(
-            [TagRecipe(tag=tag, recipe=recipe) for tag in tags]
-        )
-        IngredientRecipe.objects.bulk_create(
-            [
-                IngredientRecipe(
-                    ingredient=ingredient_id,
-                    recipe=recipe,
-                    amount=ingredient["amount"],
-                )
-                for ingredient in ingredients
-            ]
-        )
+        self._save_tags_and_ingredients(recipe, tags, ingredients)
         return recipe
 
     def to_representation(self, recipe):

@@ -24,19 +24,27 @@ class AvatarViewSet(
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
-    http_method_names = ["get"]
+    http_method_names = ["get", "head", "options", "trace"]
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
-    http_method_names = ["get"]
+    http_method_names = ["get", "head", "options", "trace"]
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
-    http_method_names = ["get", "post", "patch", "delete"]
+    http_method_names = [
+        "get",
+        "post",
+        "patch",
+        "delete",
+        "head",
+        "options",
+        "trace",
+    ]
     queryset = (
         Recipe.objects.prefetch_related("tags", "ingredients")
         .select_related("author")
