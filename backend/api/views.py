@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from rest_framework import viewsets
+from rest_framework.mixins import DestroyModelMixin, UpdateModelMixin
 
 from recipes.models import Ingredient, Recipe, Tag
 from .serializers import (
@@ -14,7 +15,9 @@ from .serializers import (
 User = get_user_model()
 
 
-class AvatarViewSet(viewsets.ModelViewSet):
+class AvatarViewSet(
+    DestroyModelMixin, UpdateModelMixin, viewsets.GenericViewSet
+):
     http_method_names = ["put", "delete"]
     queryset = User.objects.all()
     serializer_class = AvatarSerializer
