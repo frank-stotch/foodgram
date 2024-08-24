@@ -8,8 +8,10 @@ from djoser.serializers import (
     UserSerializer as DjoserUserSerializer,
 )
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.models import (
+    Favorite,
     Ingredient,
     IngredientRecipe,
     InvalidMessage,
@@ -24,6 +26,7 @@ from recipes.models import (
 REQUIRED_FIELD_MISSING = "Обязательное поле."
 DUPLICATE_INGREDIENTS = "Дублирующиеся ингредиенты: {}"
 DUPLICATE_TAGS = "Дублирующиеся теги: {}"
+DUPLICATE_RECIPES = "Этот рецепт уже есть в списке покупок."
 
 
 User = get_user_model()
@@ -256,3 +259,37 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, recipe):
         return ReadRecipeSerializer(recipe, context=self.context).data
+
+
+class ShoppingCartSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = ShoppingCart
+        fields = ("user", "recipes")
+        read_only_fields = ("user",)
+        validators = [
+            UniqueTogetherValidator(
+                queryset=ShoppingCart.objects.select_related(
+                    "user", "recipe"
+                ).all(),
+                fields=("user", "recipe"),
+                message=DUPLICATE_RECIPES,
+            )
+        ]
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Favorite
+        fields = ("user", "recipe")
+        read_only_fields = ("user",)
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Favorite.objects.select_related(
+                    "user", "recipe"
+                ).all(),
+                fields=("user", "recipe"),
+                message=DUPLICATE_RECIPES,
+            )
+        ]

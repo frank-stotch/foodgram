@@ -1,6 +1,8 @@
+import shortuuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
+
 from .validators import validate_username
 
 
@@ -167,6 +169,9 @@ class Recipe(BaseNameModel):
         verbose_name = "Рецепт"
         verbose_name_plural = "Рецепты"
         ordering = ("-pub_date",)
+
+    def get_absolute_url(self):
+        return f"/s/{shortuuid.uuid(self.pk)}"
 
 
 class TagRecipe(models.Model):
