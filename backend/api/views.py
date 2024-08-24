@@ -1,10 +1,65 @@
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from django.contrib.auth import get_user_model
+from rest_framework import viewsets
+from rest_framework.mixins import DestroyModelMixin, UpdateModelMixin
 
-from recipes.models import Tag
-from .serializers import TagSerializer
+from recipes.models import Ingredient, Recipe, Tag
+from .permissions import IsCurrentUserAndAuthenticated
+from .serializers import (
+    AvatarSerializer,
+    IngredientSerializer,
+    ReadRecipeSerializer,
+    TagSerializer,
+    WriteRecipeSerializer,
+)
 
 
-class TagViewSet(ReadOnlyModelViewSet):
-    http_method_names = ["get"]
+User = get_user_model()
+
+
+class AvatarViewSet(
+    DestroyModelMixin, UpdateModelMixin, viewsets.GenericViewSet
+):
+    http_method_names = ["put", "delete", "head", "options", "trace"]
+    queryset = User.objects.all()
+    serializer_class = AvatarSerializer
+    permission_classes = (IsCurrentUserAndAuthenticated,)
+
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    http_method_names = ["get", "head", "options", "trace"]
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
+
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    http_method_names = ["get", "head", "options", "trace"]
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+
+
+class RecipeViewSet(viewsets.ModelViewSet):
+    http_method_names = [
+        "get",
+        "post",
+        "patch",
+        "delete",
+        "head",
+        "options",
+        "trace",
+    ]
+    queryset = (
+        Recipe.objects.prefetch_related("tags", "ingredients")
+        .select_related("author")
+        .all()
+    )
+
+    def get_serializer_class(self):
+        if self.action in ["create", "update"]:
+            return WriteRecipeSerializer
+        return ReadRecipeSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(author=self.request.user)
