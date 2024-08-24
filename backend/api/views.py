@@ -3,6 +3,7 @@ from rest_framework import viewsets
 from rest_framework.mixins import DestroyModelMixin, UpdateModelMixin
 
 from recipes.models import Ingredient, Recipe, Tag
+from .permissions import IsCurrentUserAndAuthenticated
 from .serializers import (
     AvatarSerializer,
     IngredientSerializer,
@@ -18,9 +19,10 @@ User = get_user_model()
 class AvatarViewSet(
     DestroyModelMixin, UpdateModelMixin, viewsets.GenericViewSet
 ):
-    http_method_names = ["put", "delete"]
+    http_method_names = ["put", "delete", "head", "options", "trace"]
     queryset = User.objects.all()
     serializer_class = AvatarSerializer
+    permission_classes = (IsCurrentUserAndAuthenticated,)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -52,7 +54,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
 
     def get_serializer_class(self):
-        if self.request.method in ["POST", "PATCH"]:
+        if self.action in ["create", "update"]:
             return WriteRecipeSerializer
         return ReadRecipeSerializer
 

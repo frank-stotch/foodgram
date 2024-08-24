@@ -15,4 +15,7 @@ router_v1.register(
     prefix="users/me/avatar", viewset=AvatarViewSet, basename="avatar"
 )
 
-url_patterns = [path("", include(router_v1.urls))]
+url_patterns = [
+    path("", include(router_v1.urls)),
+    path("^auth/", include("djoser.urls")),
+]
