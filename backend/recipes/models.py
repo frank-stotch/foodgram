@@ -1,4 +1,4 @@
-import shortuuid
+from django.urls import reverse
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
@@ -79,10 +79,10 @@ class User(AbstractUser):
         null=False,
     )
 
+    USERNAME_FIELD = "email"
+
     REQUIRED_FIELDS = [
         "username",
-        "password",
-        "email",
         "first_name",
         "last_name",
     ]
@@ -171,11 +171,11 @@ class Recipe(BaseNameModel):
         ordering = ("-pub_date",)
 
     def get_absolute_url(self):
-        return f"/s/{shortuuid.uuid(self.pk)}"
+        return reverse("short_link", args=str(self.id))
 
 
 class TagRecipe(models.Model):
-    tag = models.ForeignKey(to=Tag, on_delete=models.SET_NULL)
+    tag = models.ForeignKey(to=Tag, on_delete=models.CASCADE)
     recipe = models.ForeignKey(to=Recipe, on_delete=models.CASCADE)
 
     class Meta:
@@ -238,7 +238,7 @@ class BaseUserRecipeModel(models.Model):
 
 
 class Favorite(BaseUserRecipeModel):
-    class Meta(BaseUserRecipeModel):
+    class Meta(BaseUserRecipeModel.Meta):
         verbose_name = "Избранное"
         verbose_name_plural = "Избранное"
 

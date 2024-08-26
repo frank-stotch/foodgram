@@ -27,6 +27,7 @@ REQUIRED_FIELD_MISSING = "Обязательное поле."
 DUPLICATE_INGREDIENTS = "Дублирующиеся ингредиенты: {}"
 DUPLICATE_TAGS = "Дублирующиеся теги: {}"
 DUPLICATE_RECIPES = "Этот рецепт уже есть в списке покупок."
+CANNOT_SUBSCRIBE_TO_YOURSELF = "Нельзя подписаться на себя."
 
 
 User = get_user_model()
@@ -82,16 +83,12 @@ class UserCreateSerializer(DjoserUserCreateSerializer):
         }
 
 
-class AvatarSerializer(DjoserUserCreateSerializer):
-    avatar = Base64ImageField(required=True)
+class AvatarSerializer(serializers.ModelSerializer):
+    avatar = Base64ImageField()
 
-    def update(self, instance, validated_data):
-        instance.avatar = validated_data.get("avatar")
-        instance.save()
-        return instance
-
-    def to_representation(self, instance):
-        return instance.avatar.url
+    class Meta:
+        model = User
+        fields = ("avatar",)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -109,7 +106,9 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 class IngredientRecipeSerializer(serializers.ModelSerializer):
-    id = serializers.PrimaryKeyRelatedField(source="ingredient.id")
+    id = serializers.PrimaryKeyRelatedField(
+        source="ingredient.id", queryset=Ingredient.objects.all()
+    )
     name = serializers.ReadOnlyField(source="ingredient.name")
     measurement_unit = serializers.ReadOnlyField(
         source="ingredient.measurement_unit"
@@ -185,7 +184,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         if not ingredients:
             raise serializers.ValidationError(REQUIRED_FIELD_MISSING)
         unique_ingredients = set()
-        duplicates = []
+        duplicates = set()
         for ingredient in ingredients:
             if ingredient["amount"] <= 0:
                 raise serializers.ValidationError(InvalidMessage.AMOUNT)
@@ -193,7 +192,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
             if ingredient_id not in unique_ingredients:
                 unique_ingredients.add(ingredient_id)
             else:
-                duplicates.append(ingredient_id)
+                duplicates.add(ingredient_id)
         if duplicates:
             raise serializers.ValidationError(
                 DUPLICATE_INGREDIENTS.format(", ".join(duplicates))
@@ -204,12 +203,12 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         if not tags:
             raise serializers.ValidationError(REQUIRED_FIELD_MISSING)
         unique_tags = set()
-        duplicates = []
+        duplicates = set()
         for tag in tags:
             if tag not in unique_tags:
                 unique_tags.add(tag)
             else:
-                duplicates.append(tag)
+                duplicates.add(tag)
         if duplicates:
             raise serializers.ValidationError(
                 DUPLICATE_TAGS.format(", ".join(duplicates))
@@ -291,5 +290,22 @@ class FavoriteSerializer(serializers.ModelSerializer):
                 ).all(),
                 fields=("user", "recipe"),
                 message=DUPLICATE_RECIPES,
+            )
+        ]
+
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Subscription
+        fields = ("author", "subscriber")
+        read_only_fields = fields
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Subscription.objects.select_related(
+                    "author", "subscriber"
+                ).all(),
+                fields=("author", "subscriber"),
+                message=CANNOT_SUBSCRIBE_TO_YOURSELF,
             )
         ]

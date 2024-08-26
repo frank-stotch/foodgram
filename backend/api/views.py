@@ -1,27 +1,31 @@
 import csv
 
+from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
+from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
-from rest_framework import viewsets
+from rest_framework import filters, viewsets
+from rest_framework.generics import DestroyAPIView, UpdateAPIView
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.mixins import (
     CreateModelMixin,
     DestroyModelMixin,
-    UpdateModelMixin,
+    ListModelMixin,
 )
 
 from recipes.models import Ingredient, Recipe, Tag
-from .permissions import IsCurrentUserAndAuthenticated
+from .filters import RecipeFilter
 from .serializers import (
     AvatarSerializer,
     FavoriteSerializer,
     IngredientSerializer,
     ReadRecipeSerializer,
     ShoppingCartSerializer,
+    SubscriptionSerializer,
     TagSerializer,
     WriteRecipeSerializer,
 )
@@ -30,13 +34,26 @@ from .serializers import (
 User = get_user_model()
 
 
-class AvatarViewSet(
-    DestroyModelMixin, UpdateModelMixin, viewsets.GenericViewSet
-):
-    http_method_names = ["put", "delete", "head", "options", "trace"]
-    queryset = User.objects.all()
+class AvatarAPIView(DestroyAPIView, UpdateAPIView):
     serializer_class = AvatarSerializer
-    permission_classes = (IsCurrentUserAndAuthenticated,)
+    permission_classes = [IsAuthenticated]
+    http_method_names = ["put", "delete", "head", "options", "trace"]
+
+    def get_object(self):
+        return self.request.user
+
+    def put(self, request, *args, **kwargs):
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=HTTPStatus.OK)
+
+    def delete(self, request, *args, **kwargs):
+        user = self.get_object()
+        user.avatar = None
+        user.save()
+        return Response(status=HTTPStatus.NO_CONTENT)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -66,6 +83,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         .select_related("author")
         .all()
     )
+    filter_backends = (DjangoFilterBackend, filters.SearchFilter)
+    filterset_class = RecipeFilter
+    search_fields = ("name",)
 
     def get_serializer_class(self):
         if self.action in ["create", "update"]:
@@ -140,9 +160,7 @@ class ShoppingCartViewSet(
 
 
 class FavoriteViewSet(
-    CreateModelMixin,
-    DestroyModelMixin,
-    viewsets.GenericViewSet
+    CreateModelMixin, DestroyModelMixin, viewsets.GenericViewSet
 ):
     http_method_names = ["post", "delete", "head", "options", "trace"]
     serializer_class = FavoriteSerializer
@@ -156,3 +174,23 @@ class FavoriteViewSet(
 
     def get_queryset(self):
         return self.request.user.favorites.select_related("recipe")
+
+
+class SubscriptionViewSet(
+    CreateModelMixin,
+    DestroyModelMixin,
+    ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    http_method_names = ["get", "post", "delete", "head", "options", "trace"]
+    serializer_class = SubscriptionSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return self.request.user.followers.select_related("author")
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user, author=self.get_author())
+
+    def get_author(self):
+        return get_object_or_404(User, pk=self.kwargs.get("pk"))

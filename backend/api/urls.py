@@ -2,7 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
-    AvatarViewSet,
+    AvatarAPIView,
     FavoriteViewSet,
     IngredientViewSet,
     RecipeViewSet,
@@ -19,10 +19,6 @@ router_v1.register(
 router_v1.register(prefix="recipes", viewset=RecipeViewSet, basename="recipes")
 
 router_v1.register(
-    prefix="users/me/avatar", viewset=AvatarViewSet, basename="avatar"
-)
-
-router_v1.register(
     prefix="recipes/<int:pk>/shopping_cart",
     viewset=ShoppingCartViewSet,
     basename="shopping_cart",
@@ -34,7 +30,9 @@ router_v1.register(
     basename="favorite",
 )
 
-url_patterns = [
+urlpatterns = [
     path("", include(router_v1.urls)),
-    path("^auth/", include("djoser.urls")),
+    path("users/me/avatar/", AvatarAPIView.as_view(), name="avatar"),
+    path("auth/", include("djoser.urls.authtoken")),
+    path("", include("djoser.urls")),
 ]

@@ -29,7 +29,9 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,").split(",")
+# ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,").split(",")
+
+ALLOWED_HOSTS = []
 
 # Application definition
 
@@ -173,7 +175,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 
-USERNAME_PATTERN = r"[\w.@+-]+\z"
+USERNAME_PATTERN = r"[\w.@+-]"
 
 FORBIDDEN_USERNAMES = ("me",)
 
