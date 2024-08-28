@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "djoser",
     "api",
     "recipes",
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -162,10 +163,15 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.TokenAuthentication",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "DEFAULT_PAGINATION_CLASS": "api.pagination.LimitPageNumberPagination",
+    "PAGE_SIZE": 6,
+    "DEFAULT_FILTER_BACKENDS": [
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+    ],
 }
 
-AUTH_USER_MODEL = "recipes.User"
+AUTH_USER_MODEL = "users.User"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -187,6 +193,8 @@ DJOSER = {
         "user_create": "api.serializers.UserCreateSerializer",
     },
     "PERMISSIONS": {
-        "user": ["djoser.permissions.CurrentUserOrAdminOrReadOnly"],
+        'user': ('djoser.permissions.CurrentUserOrAdminOrReadOnly',),
+        'user_list': ('rest_framework.permissions.AllowAny',),
     },
+    "HIDE_USERS": False,
 }
