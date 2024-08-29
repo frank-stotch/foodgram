@@ -2,10 +2,12 @@ from http import HTTPStatus
 
 from rest_framework.decorators import action
 from djoser.views import UserViewSet as DjoserUserViewSet
+from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from . import serializers
+from recipes.models import Tag
 
 
 class UserViewSet(DjoserUserViewSet):
@@ -35,3 +37,10 @@ class UserViewSet(DjoserUserViewSet):
             return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
         user.avatar.delete(save=True)
         return Response(status=HTTPStatus.NO_CONTENT)
+
+
+class TagViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = serializers.TagSerializer
+    pagination_class = None
+    permission_classes = (AllowAny,)

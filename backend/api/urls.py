@@ -12,6 +12,12 @@ router_v1.register(
     basename="users"
 )
 
+router_v1.register(
+    prefix="tags",
+    viewset=views.TagViewSet,
+    basename="tags"
+)
+
 
 urlpatterns = [
     path("", include(router_v1.urls)),

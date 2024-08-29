@@ -5,6 +5,8 @@ from djoser.serializers import UserSerializer as DjoserUserSerializer
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from recipes.models import Tag
+
 
 User = get_user_model()
 
@@ -43,3 +45,9 @@ class AvatarSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("avatar",)
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = "__all__"
