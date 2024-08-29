@@ -11,18 +11,12 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.mixins import (
-    CreateModelMixin,
-    DestroyModelMixin,
-    ListModelMixin,
-)
 
-from recipes.models import Ingredient, Recipe, Tag
+from recipes.models import Ingredient, Recipe, RecipeIngredient, Tag
 from .constants import InvalidErrorMessage
-from .filters import IngredientFilter, RecipeFilter
+from .filters import IngredientFilter, RecipeFilterSet
 from .pagination import (
     LimitPageNumberPagination,
-    RecipeLimitPageNumberPagination,
 )
 from .permissions import IsAuthorOrAdminOrReadOnly
 from .serializers import (
@@ -92,7 +86,8 @@ class UserViewSet(DjoserUserViewSet):
         author = get_object_or_404(User, pk=id)
         if request.method == "POST":
             serializer = WriteSubscriptionSerializer(
-                data={"subscriber": user.pk, "author": author.pk}
+                data={"subscriber": user.pk, "author": author.pk},
+                context={"request": request},
             )
             serializer.is_valid(raise_exception=True)
             serializer.save()
@@ -103,7 +98,7 @@ class UserViewSet(DjoserUserViewSet):
             return Response(status=HTTPStatus.NO_CONTENT)
         return Response(
             {"errors": InvalidErrorMessage.ALREADY_SUBSCRIBED},
-            status=HTTPStatus.BAD_REQUEST
+            status=HTTPStatus.BAD_REQUEST,
         )
 
 
@@ -119,9 +114,9 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = IngredientFilter
-    permission_classes = [AllowAny]
+    filter_backends = (IngredientFilter,)
+    search_fields = ("^name",)
+    permission_classes = (AllowAny,)
 
 
 class RecipeViewSet(viewsets.ModelViewSet):
@@ -129,10 +124,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
         Recipe.objects.prefetch_related("tags", "ingredients")
         .select_related("author")
         .all()
+        # Recipe.objects.all()
     )
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = RecipeFilter
-    permission_classes = (IsAuthorOrAdminOrReadOnly | IsAuthenticated,)
+    filterset_class = RecipeFilterSet
+    permission_classes = (IsAuthorOrAdminOrReadOnly,)
 
     def get_serializer_class(self):
         if self.action in ["create", "update"]:
@@ -152,51 +148,78 @@ class RecipeViewSet(viewsets.ModelViewSet):
         link = request.build_absolute_uri(recipe.get_absolute_url())
         return Response({"short-link": link})
 
-
-class ShoppingCartViewSet(
-    CreateModelMixin,
-    DestroyModelMixin,
-    viewsets.GenericViewSet,
-):
-    http_method_names = ["get", "post", "delete", "head", "options", "trace"]
-    serializer_class = ShoppingCartSerializer
-    permission_classes = (IsAuthenticated,)
-
-    def get_queryset(self):
-        return self.request.user.shoppingcarts.select_related("recipe")
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user, recipe=self.get_recipe())
-
     def get_recipe(self):
         return get_object_or_404(Recipe, pk=self.kwargs.get("pk"))
 
     @action(
+        detail=True,
+        methods=["post", "delete"],
+    )
+    def favorite(self, request, pk=None):
+        get_object_or_404(Recipe, pk=pk)
+        if request.method == "POST":
+            serializer = FavoriteSerializer(
+                data={"user": request.user.pk, "recipe": pk}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=HTTPStatus.CREATED)
+        favorite = request.user.favorites.filter(recipe=pk)
+        if favorite.exists():
+            favorite.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        return Response(
+            {"errors": InvalidErrorMessage.ALREADY_FAVORITED},
+            status=HTTPStatus.BAD_REQUEST,
+        )
+
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+    )
+    def shopping_cart(self, request, pk=None):
+        get_object_or_404(Recipe, pk=pk)
+        if request.method == "POST":
+            serializer = ShoppingCartSerializer(
+                data={"user": request.user.pk, "recipe": pk}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=HTTPStatus.CREATED)
+        shopping_cart = request.user.shoppingcarts.filter(recipe=pk)
+        if shopping_cart.exists():
+            shopping_cart.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        return Response(
+            {"errors": InvalidErrorMessage.DUPLICATE_RECIPES},
+            status=HTTPStatus.BAD_REQUEST,
+        )
+
+    @action(
         detail=False,
         methods=["get"],
-        permission_classes=permission_classes,
-        url_path="recipes/download_shopping_cart",
     )
     def download_shopping_cart(self, request):
-        response = HttpResponse(content_type="text/csv")
+        ingredients = (
+            RecipeIngredient.objects.filter(
+                recipe__shoppingcarts__user=request.user
+            )
+            .values("ingredient__name", "ingredient__measurement_unit")
+            .annotate(amount=Sum("amount"))
+        )
+        response = HttpResponse(
+            content_type="text/csv",
+        )
         response["Content-Disposition"] = (
             "attachment; filename=shopping_cart.csv"
         )
         writer = csv.writer(response)
-        ingredients = (
-            self.get_queryset()
-            .values(
-                "recipe__ingredients__name",
-                "recipe__ingredients__measurement_unit",
-            )
-            .annotate(amount=Sum("recipe__ingredients__amount"))
-        )
-        writer.writerow(["Ингредиент", "Единица измерения", "Количество"])
+        writer.writerow(["Название", "Единица измерения", "Количество"])
         for ingredient in ingredients:
             writer.writerow(
                 [
-                    ingredient["recipe__ingredients__name"],
-                    ingredient["recipe__ingredients__measurement_unit"],
+                    ingredient["ingredient__name"],
+                    ingredient["ingredient__measurement_unit"],
                     ingredient["amount"],
                 ]
             )

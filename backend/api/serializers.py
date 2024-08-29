@@ -181,7 +181,7 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
 class WriteRecipeSerializer(serializers.ModelSerializer):
     ingredients = RecipeIngredientSerializer(many=True)
     tags = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Tag.objects.all()
+        many=True, queryset=Tag.objects.all(), required=True
     )
     image = Base64ImageField()
 
@@ -240,7 +240,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
     def update(self, recipe, validated_data):
         new_ingredients = validated_data.pop("ingredients")
         recipe.tags.clear()
-        recipe.RecipeIngredients.clear()
+        recipe.ingredients.clear()
         self._save_ingredients(recipe, new_ingredients)
         return super().update(recipe, validated_data)
 
@@ -277,13 +277,12 @@ class FavoriteSerializer(serializers.ModelSerializer):
                     "user", "recipe"
                 ).all(),
                 fields=("user", "recipe"),
-                message=InvalidErrorMessage.DUPLICATE_RECIPES,
+                message=InvalidErrorMessage.ALREADY_FAVORITED,
             )
         ]
 
 
 class ReadSubscriptionSerializer(UserSerializer):
-
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.ReadOnlyField(source="recipes.count")
 
@@ -296,9 +295,10 @@ class ReadSubscriptionSerializer(UserSerializer):
         recipes = user.recipes.all()
         if recipes_limit and recipes_limit in digits:
             recipes = recipes[: int(recipes_limit)]
-        return ShortRecipeSerializer(
+        serializer = ShortRecipeSerializer(
             recipes, context=self.context, many=True
-        ).data
+        )
+        return serializer.data
 
 
 class WriteSubscriptionSerializer(serializers.ModelSerializer):

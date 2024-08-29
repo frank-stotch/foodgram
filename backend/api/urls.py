@@ -4,7 +4,6 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     IngredientViewSet,
     RecipeViewSet,
-    ShoppingCartViewSet,
     TagViewSet,
     UserViewSet,
 )
@@ -17,12 +16,6 @@ router_v1.register(
     prefix="ingredients", viewset=IngredientViewSet, basename="ingredients"
 )
 router_v1.register(prefix="recipes", viewset=RecipeViewSet, basename="recipes")
-
-router_v1.register(
-    prefix="recipes/<int:pk>/shopping_cart",
-    viewset=ShoppingCartViewSet,
-    basename="shopping_cart",
-)
 
 urlpatterns = [
     path("", include(router_v1.urls)),

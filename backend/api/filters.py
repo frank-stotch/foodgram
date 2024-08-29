@@ -1,46 +1,36 @@
-from django.contrib.auth import get_user_model
-from django_filters import (
-    CharFilter,
-    FilterSet,
-    ModelChoiceFilter
+from django_filters.rest_framework import FilterSet
+from django_filters.rest_framework.filters import (
+    BooleanFilter,
+    ModelMultipleChoiceFilter,
 )
+from rest_framework.filters import SearchFilter
 
-from recipes.models import Ingredient, Recipe
-
-
-User = get_user_model()
+from recipes.models import Recipe, Tag
 
 
-class RecipeFilter(FilterSet):
-    is_favorited = CharFilter(method="get_is_favorited")
-    is_in_shopping_cart = CharFilter(method="get_is_in_shopping_cart")
-    author = ModelChoiceFilter(queryset=User.objects.all())
-    tags = CharFilter(method='filter_tags')
+class IngredientFilter(SearchFilter):
+    search_param = "name"
+
+
+class RecipeFilterSet(FilterSet):
+    tags = ModelMultipleChoiceFilter(
+        field_name="tags__slug",
+        to_field_name="slug",
+        queryset=Tag.objects.all(),
+    )
+    is_favorited = BooleanFilter(method="get_is_favorited")
+    is_in_shopping_cart = BooleanFilter(method="get_is_in_shopping_cart")
 
     class Meta:
         model = Recipe
-        fields = ["is_favorited", "is_in_shopping_cart", "author", "tags"]
+        fields = ("tags", "author", "is_favorited", "is_in_shopping_cart")
 
     def get_is_favorited(self, queryset, name, value):
-        user = self.request.user
-        if user.is_authenticated and value:
-            return queryset.filter(favorites__user=user)
+        if self.request.user.is_authenticated and value:
+            return queryset.filter(favorites__user=self.request.user)
         return queryset
 
     def get_is_in_shopping_cart(self, queryset, name, value):
-        user = self.request.user
-        if user.is_authenticated and value:
-            return queryset.filter(shoppingcarts__user=user)
+        if self.request.user.is_authenticated and value:
+            return queryset.filter(shoppingcarts__user=self.request.user)
         return queryset
-
-    def filter_tags(self, queryset, name, value):
-        tag_slugs = self.request.GET.getlist('tags')
-        return queryset.filter(tags__slug__in=tag_slugs).distinct()
-
-
-class IngredientFilter(FilterSet):
-    name = CharFilter(lookup_expr='istartswith', field_name='name')
-
-    class Meta:
-        model = Ingredient
-        fields = ['name']
