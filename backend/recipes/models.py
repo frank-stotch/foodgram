@@ -74,6 +74,11 @@ class Recipe(BaseNameModel):
     pub_date = models.DateTimeField(
         verbose_name="Дата публикации", auto_now_add=True
     )
+    ingredients = models.ManyToManyField(
+        to=Ingredient,
+        through="RecipeIngredient",
+        verbose_name="Ингредиенты",
+    )
 
     class Meta(BaseNameModel.Meta):
         verbose_name = "Рецепт"
@@ -124,8 +129,7 @@ class RecipeIngredient(BaseRecipeModel):
         ],
     )
 
-    class Meta:
-        default_related_name = "ingredients"
+    class Meta(BaseRecipeModel.Meta):
         constraints = [
             models.UniqueConstraint(
                 fields=["recipe", "ingredient"], name="only_unique_ingredients"
