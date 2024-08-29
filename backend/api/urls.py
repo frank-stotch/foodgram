@@ -24,6 +24,12 @@ router_v1.register(
     basename="ingredients"
 )
 
+router_v1.register(
+    prefix="recipes",
+    viewset=views.RecipeViewSet,
+    basename="recipes"
+)
+
 
 urlpatterns = [
     path("", include(router_v1.urls)),
