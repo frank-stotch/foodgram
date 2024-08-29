@@ -62,9 +62,13 @@ class Subscription(models.Model):
         to=User,
         verbose_name=VerboseName.SUBSCRIBER,
         related_name="subscribers",
+        on_delete=models.CASCADE,
     )
     author = models.ForeignKey(
-        to=User, verbose_name=VerboseName.AUTHOR, related_name="subscribed_to"
+        to=User,
+        verbose_name=VerboseName.AUTHOR,
+        related_name="subscribed_to",
+        on_delete=models.CASCADE,
     )
 
     class Meta:

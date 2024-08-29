@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework.authtoken",
     "rest_framework",
-    "corsheaders",
+    # "corsheaders",
     "django_filters",
     "djoser",
     "users",
@@ -155,14 +155,26 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticatedOrReadOnly",
+        "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 6,
 }
 
+DJOSER = {
+    'HIDE_USERS': False,
+    'SERIALIZERS': {
+        'user': 'api.serializers.UserSerializer',
+        'current_user': 'api.serializers.UserSerializer',
+    },
+    'PERMISSIONS': {
+        'user': ('djoser.permissions.CurrentUserOrAdminOrReadOnly',),
+        'user_list': ('rest_framework.permissions.AllowAny',),
+    },
+}
 
 AUTH_USER_MODEL = "users.User"
 
