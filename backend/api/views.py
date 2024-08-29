@@ -1,13 +1,14 @@
 from http import HTTPStatus
 
-from rest_framework.decorators import action
+from django_filters.rest_framework import DjangoFilterBackend
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from . import serializers
-from recipes.models import Tag
+from . import filters, serializers
+from recipes.models import Ingredient, Tag
 
 
 class UserViewSet(DjoserUserViewSet):
@@ -43,4 +44,13 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
     pagination_class = None
+    permission_classes = (AllowAny,)
+
+
+class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = serializers.IngredientSerializer
+    pagination_class = None
+    filter_backends = (filters.IngredientFilter,)
+    search_fields = ("^name",)
     permission_classes = (AllowAny,)

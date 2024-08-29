@@ -18,6 +18,12 @@ router_v1.register(
     basename="tags"
 )
 
+router_v1.register(
+    prefix="ingredients",
+    viewset=views.IngredientViewSet,
+    basename="ingredients"
+)
+
 
 urlpatterns = [
     path("", include(router_v1.urls)),
