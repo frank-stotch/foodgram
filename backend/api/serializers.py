@@ -152,7 +152,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         return super().validate(data)
 
     @transaction.atomic
-    def ingredients_create(self, recipe, ingredients):
+    def _save_ingredients(self, recipe, ingredients):
         RecipeIngredient.objects.bulk_create(
             RecipeIngredient(
                 recipe=recipe,
@@ -166,7 +166,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         ingredients_data = validated_data.pop("ingredients")
         recipe = super().create(validated_data)
-        self.ingredients_create(recipe, ingredients_data)
+        self._save_ingredients(recipe, ingredients_data)
         return recipe
 
     @transaction.atomic
@@ -174,7 +174,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         new_ingredients = validated_data.pop("ingredients")
         recipe.tags.clear()
         recipe.ingredients.clear()
-        self.ingredients_create(recipe, new_ingredients)
+        self._save_ingredients(recipe, new_ingredients)
         return super().update(recipe, validated_data)
 
     def to_representation(self, recipe):

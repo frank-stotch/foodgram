@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
+from django.urls import reverse
 
 
 User = get_user_model()
@@ -119,6 +120,12 @@ class Recipe(models.Model):
         verbose_name_plural = verbose_name + "ы"
         default_related_name = "%(class)ss"
         ordering = ("-pub_date",)
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("short_link", args=[str(self.pk)])
 
 
 class BaseRecipeModel(models.Model):
