@@ -171,6 +171,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 
 EMAIL_FILE_PATH = './email'
 
-USERNAME_PATTERN = r'[\w.@+-]+\z'
+USERNAME_PATTERN = r'[\w.@+-]'
 
 FORBIDDEN_USERNAMES = ('me',)
