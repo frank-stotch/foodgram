@@ -24,6 +24,7 @@ class VerboseName:
     PUB_DATE = "Дата публикации"
     RECIPE = "Рецепт"
     AMOUNT = "Количество"
+    FAVORITE = "Избранное"
 
 
 class FieldLength:
@@ -36,6 +37,7 @@ class FieldLength:
 class Error:
     COOKING_TIME = f"Не менее {MIN_VALUE} мин. приготовления"
     AMOUNT = f"Не менее {MIN_VALUE} ед. ингредиента"
+    ALREADY_IN_SHOPPING_CART = "Рецепт уже есть в списке покупок"
 
 
 class Tag(models.Model):
@@ -182,3 +184,32 @@ class RecipeIngredient(BaseRecipeModel):
 
     def __str__(self) -> str:
         return f"Ингредиент {self.ingredient} для рецепта {self.recipe}"
+
+
+class BaseUserRecipeModel(BaseRecipeModel):
+    user = models.ForeignKey(
+        to=User,
+        on_delete=models.CASCADE,
+        verbose_name="Пользователь",
+    )
+
+    class Meta(BaseRecipeModel.Meta):
+        abstract = True
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "recipe"],
+                name="unique_%(class)s",
+            ),
+        ]
+
+
+class Favorite(BaseUserRecipeModel):
+    class Meta(BaseUserRecipeModel.Meta):
+        verbose_name = VerboseName.FAVORITE
+        verbose_name_plural = verbose_name
+
+
+class ShoppingCart(BaseUserRecipeModel):
+    class Meta(BaseUserRecipeModel.Meta):
+        verbose_name = "Корзина покупок"
+        verbose_name_plural = verbose_name

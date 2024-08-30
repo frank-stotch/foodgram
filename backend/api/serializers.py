@@ -1,4 +1,5 @@
 from base64 import b64decode
+from string import digits
 
 from django.core.files.base import ContentFile
 from django.core.validators import MinValueValidator
@@ -9,13 +10,14 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from recipes.models import (
-    Error,
+    Error as RecipeError,
     Ingredient,
     MIN_VALUE,
     Recipe,
     RecipeIngredient,
     Tag,
 )
+from users.models import Error as UserError, Subscription
 
 
 User = get_user_model()
@@ -50,7 +52,7 @@ class UserSerializer(DjoserUserSerializer):
         user = self.context.get("request").user
         return (
             user.is_authenticated
-            and user.subscribers.filter(author=author).exists()
+            and user.subscriber.filter(author=author).exists()
         )
 
 
@@ -84,7 +86,9 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
     )
     amount = serializers.IntegerField(
         validators=[
-            MinValueValidator(limit_value=MIN_VALUE, message=Error.AMOUNT)
+            MinValueValidator(
+                limit_value=MIN_VALUE, message=RecipeError.AMOUNT
+            )
         ]
     )
 
@@ -97,7 +101,7 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     author = UserSerializer(read_only=True)
     ingredients = RecipeIngredientSerializer(
-        source='recipeingredients', many=True
+        source="recipeingredients", many=True
     )
     is_in_shopping_cart = serializers.SerializerMethodField()
     is_favorited = serializers.SerializerMethodField()
@@ -105,9 +109,16 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = (
-            'id', 'tags', 'author', 'ingredients', 'name',
-            'image', 'text', 'cooking_time', 'is_in_shopping_cart',
-            'is_favorited'
+            "id",
+            "tags",
+            "author",
+            "ingredients",
+            "name",
+            "image",
+            "text",
+            "cooking_time",
+            "is_in_shopping_cart",
+            "is_favorited",
         )
 
     def get_is_in_shopping_cart(self, recipe):
@@ -179,3 +190,61 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, recipe):
         return ReadRecipeSerializer(recipe, context=self.context).data
+
+
+class ShortRecipeSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Recipe
+        fields = (
+            "id",
+            "name",
+            "image",
+            "cooking_time",
+        )
+
+
+class ReadSubscriptionSerializer(UserSerializer):
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.ReadOnlyField(source='recipes.count')
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ('recipes', 'recipes_count')
+
+    def get_recipes(self, user):
+        request = self.context.get('request')
+        recipes_limit = request.GET.get('recipes_limit')
+        recipes = user.recipes.all()
+        if recipes_limit and recipes_limit.isnumeric():
+            recipes = recipes[:int(recipes_limit)]
+        serializer = ShortRecipeSerializer(
+            recipes, context=self.context, many=True
+        )
+        return serializer.data
+
+
+class WriteSubscriptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Subscription
+        fields = ("author", "subscriber")
+
+    def validate(self, data):
+        subscriber = data.get("subscriber")
+        author = data.get("author")
+        if author == subscriber:
+            raise serializers.ValidationError(
+                UserError.CANNOT_SUBSCRIBE_TO_YOURSELF
+            )
+        if Subscription.objects.filter(
+            author=author, subscriber=subscriber
+        ).exists():
+            raise serializers.ValidationError(UserError.ALREADY_SUBSCRIBED)
+        return data
+
+    def to_representation(self, instance):
+        return ReadSubscriptionSerializer(
+            instance.author, context=self.context
+        ).data
+
+

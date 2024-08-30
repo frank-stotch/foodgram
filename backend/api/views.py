@@ -1,15 +1,30 @@
 from http import HTTPStatus
 
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import FileResponse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 
-from . import filters, permissions, serializers
-from recipes.models import Ingredient, Recipe, Tag
+from . import filters, pagination, permissions, serializers
+from recipes.models import (
+    Error as RecipeError,
+    Ingredient,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Tag,
+)
+from users.models import Error as UserError
+from .serializers import ShortRecipeSerializer
+
+User = get_user_model()
 
 
 class UserViewSet(DjoserUserViewSet):
@@ -40,6 +55,47 @@ class UserViewSet(DjoserUserViewSet):
             return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
         user.avatar.delete(save=True)
         return Response(status=HTTPStatus.NO_CONTENT)
+
+    @action(
+        detail=False,
+        methods=("GET",),
+        pagination_class=pagination.LimitPageNumberPagination,
+    )
+    def subscriptions(self, request):
+        queryset = User.objects.filter(subscribing__subscriber=request.user)
+        serializer = serializers.ReadSubscriptionSerializer(
+            self.paginate_queryset(queryset),
+            many=True,
+            context={"request": request},
+        )
+        return self.get_paginated_response(serializer.data)
+
+    @action(
+        detail=True,
+        methods=(
+            "POST",
+            "DELETE",
+        ),
+    )
+    def subscribe(self, request, id):
+        user = request.user
+        author = get_object_or_404(User, pk=id)
+        if request.method == "POST":
+            serializer = serializers.WriteSubscriptionSerializer(
+                data={"subscriber": user.pk, "author": author.pk},
+                context={"request": request},
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data, status=HTTPStatus.CREATED)
+        subscription = user.subscriber.filter(author=author)
+        if subscription.exists():
+            subscription.delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        return Response(
+            {"errors": UserError.ALREADY_SUBSCRIBED},
+            status=HTTPStatus.BAD_REQUEST,
+        )
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -77,3 +133,50 @@ class RecipeViewSet(viewsets.ModelViewSet):
         recipe = self.get_object()
         link = request.build_absolute_uri(recipe.get_absolute_url())
         return Response({"short-link": link}, status=HTTPStatus.OK)
+
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+    )
+    def shopping_cart(self, request, pk=None):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == "POST":
+            try:
+                ShoppingCart.objects.create(recipe=recipe, user=request.user)
+                return Response(
+                    ShortRecipeSerializer(recipe).data,
+                    status=HTTPStatus.CREATED,
+                )
+            except IntegrityError:
+                return Response(
+                    dict(error=RecipeError.ALREADY_IN_SHOPPING_CART),
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+        try:
+            ShoppingCart.objects.filter(
+                recipe=recipe, user=request.user
+            ).delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        except IntegrityError:
+            return Response(status=HTTPStatus.BAD_REQUEST)
+
+    @action(detail=False)
+    def download_shopping_cart(self, request):
+        shopping_cart = (
+            RecipeIngredient.objects.filter(
+                recipe__shoppingcarts__user=request.user
+            )
+            .values("ingredient__name", "ingredient__measurement_unit")
+            .annotate(amount=Sum("amount"))
+            .order_by("ingredient__name")
+        )
+        content = ["Список покупок:"]
+        for item in shopping_cart:
+            content.append(
+                f"{item['ingredient__name']} - {item['amount']}"
+                f" {item['ingredient__measurement_unit']}\n"
+            )
+        content = "\n".join(content)
+        return FileResponse(
+            content, as_attachment=True, filename="shopping_list.txt"
+        )

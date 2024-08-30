@@ -21,6 +21,11 @@ class FieldLength:
     STANDARD = 150
 
 
+class Error:
+    ALREADY_SUBSCRIBED = "Вы уже подписаны на этого автора"
+    CANNOT_SUBSCRIBE_TO_YOURSELF = "Нельзя подписаться на самого себя"
+
+
 class User(AbstractUser):
 
     USERNAME_FIELD = "email"
@@ -61,13 +66,13 @@ class Subscription(models.Model):
     subscriber = models.ForeignKey(
         to=User,
         verbose_name=VerboseName.SUBSCRIBER,
-        related_name="subscribers",
+        related_name="subscriber",
         on_delete=models.CASCADE,
     )
     author = models.ForeignKey(
         to=User,
         verbose_name=VerboseName.AUTHOR,
-        related_name="subscribed_to",
+        related_name="subscribing",
         on_delete=models.CASCADE,
     )
 
