@@ -153,13 +153,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     dict(error=RecipeError.ALREADY_IN_SHOPPING_CART),
                     status=HTTPStatus.BAD_REQUEST,
                 )
-        try:
+        if ShoppingCart.objects.filter(
+            recipe=recipe, user=request.user
+        ).exists():
             ShoppingCart.objects.filter(
                 recipe=recipe, user=request.user
             ).delete()
             return Response(status=HTTPStatus.NO_CONTENT)
-        except IntegrityError:
-            return Response(status=HTTPStatus.BAD_REQUEST)
+        return Response(
+            dict(error=RecipeError.NOT_IN_SHOPPING_CART),
+            status=HTTPStatus.BAD_REQUEST,
+        )
 
     @action(detail=False)
     def download_shopping_cart(self, request):
@@ -200,8 +204,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
                     dict(error=RecipeError.ALREADY_FAVORITED),
                     status=HTTPStatus.BAD_REQUEST,
                 )
-        try:
+        if Favorite.objects.filter(recipe=recipe, user=request.user).exists():
             Favorite.objects.filter(recipe=recipe, user=request.user).delete()
             return Response(status=HTTPStatus.NO_CONTENT)
-        except IntegrityError:
-            return Response(status=HTTPStatus.BAD_REQUEST)
+        return Response(
+            dict(error=RecipeError.NOT_FAVORITED),
+            status=HTTPStatus.BAD_REQUEST,
+        )
