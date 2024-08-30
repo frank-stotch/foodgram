@@ -1,5 +1,4 @@
 from base64 import b64decode
-from string import digits
 
 from django.core.files.base import ContentFile
 from django.core.validators import MinValueValidator
@@ -8,9 +7,11 @@ from djoser.serializers import UserSerializer as DjoserUserSerializer
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.models import (
     Error as RecipeError,
+    Favorite,
     Ingredient,
     MIN_VALUE,
     Recipe,
@@ -122,10 +123,18 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
         )
 
     def get_is_in_shopping_cart(self, recipe):
-        return True  # TODO
+        user = self.context.get("request").user
+        return (
+            user.is_authenticated
+            and user.shoppingcarts.filter(recipe=recipe).exists()
+        )
 
     def get_is_favorited(self, recipe):
-        return True  # TODO
+        user = self.context.get("request").user
+        return (
+            user.is_authenticated
+            and user.favorites.filter(recipe=recipe).exists()
+        )
 
 
 class WriteRecipeSerializer(serializers.ModelSerializer):
@@ -206,17 +215,17 @@ class ShortRecipeSerializer(serializers.ModelSerializer):
 
 class ReadSubscriptionSerializer(UserSerializer):
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.ReadOnlyField(source='recipes.count')
+    recipes_count = serializers.ReadOnlyField(source="recipes.count")
 
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ('recipes', 'recipes_count')
+        fields = UserSerializer.Meta.fields + ("recipes", "recipes_count")
 
     def get_recipes(self, user):
-        request = self.context.get('request')
-        recipes_limit = request.GET.get('recipes_limit')
+        request = self.context.get("request")
+        recipes_limit = request.GET.get("recipes_limit")
         recipes = user.recipes.all()
         if recipes_limit and recipes_limit.isnumeric():
-            recipes = recipes[:int(recipes_limit)]
+            recipes = recipes[: int(recipes_limit)]
         serializer = ShortRecipeSerializer(
             recipes, context=self.context, many=True
         )
@@ -246,5 +255,3 @@ class WriteSubscriptionSerializer(serializers.ModelSerializer):
         return ReadSubscriptionSerializer(
             instance.author, context=self.context
         ).data
-
-

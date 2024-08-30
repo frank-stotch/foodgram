@@ -38,6 +38,7 @@ class Error:
     COOKING_TIME = f"Не менее {MIN_VALUE} мин. приготовления"
     AMOUNT = f"Не менее {MIN_VALUE} ед. ингредиента"
     ALREADY_IN_SHOPPING_CART = "Рецепт уже есть в списке покупок"
+    ALREADY_FAVORITED = "Рецепт уже есть в избранном"
 
 
 class Tag(models.Model):

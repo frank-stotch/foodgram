@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from . import filters, pagination, permissions, serializers
 from recipes.models import (
     Error as RecipeError,
+    Favorite,
     Ingredient,
     Recipe,
     RecipeIngredient,
@@ -22,7 +23,7 @@ from recipes.models import (
     Tag,
 )
 from users.models import Error as UserError
-from .serializers import ShortRecipeSerializer
+
 
 User = get_user_model()
 
@@ -144,7 +145,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             try:
                 ShoppingCart.objects.create(recipe=recipe, user=request.user)
                 return Response(
-                    ShortRecipeSerializer(recipe).data,
+                    serializers.ShortRecipeSerializer(recipe).data,
                     status=HTTPStatus.CREATED,
                 )
             except IntegrityError:
@@ -180,3 +181,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return FileResponse(
             content, as_attachment=True, filename="shopping_list.txt"
         )
+
+    @action(
+        methods=("POST", "DELETE"),
+        detail=True,
+    )
+    def favorite(self, request, pk=None):
+        recipe = get_object_or_404(Recipe, pk=pk)
+        if request.method == "POST":
+            try:
+                Favorite.objects.create(recipe=recipe, user=request.user)
+                return Response(
+                    serializers.ShortRecipeSerializer(recipe).data,
+                    status=HTTPStatus.CREATED,
+                )
+            except IntegrityError:
+                return Response(
+                    dict(error=RecipeError.ALREADY_FAVORITED),
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+        try:
+            Favorite.objects.filter(recipe=recipe, user=request.user).delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        except IntegrityError:
+            return Response(status=HTTPStatus.BAD_REQUEST)
