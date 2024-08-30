@@ -135,36 +135,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         link = request.build_absolute_uri(recipe.get_absolute_url())
         return Response({"short-link": link}, status=HTTPStatus.OK)
 
-    @action(
-        detail=True,
-        methods=["post", "delete"],
-    )
-    def shopping_cart(self, request, pk=None):
-        recipe = get_object_or_404(Recipe, pk=pk)
-        if request.method == "POST":
-            try:
-                ShoppingCart.objects.create(recipe=recipe, user=request.user)
-                return Response(
-                    serializers.ShortRecipeSerializer(recipe).data,
-                    status=HTTPStatus.CREATED,
-                )
-            except IntegrityError:
-                return Response(
-                    dict(error=RecipeError.ALREADY_IN_SHOPPING_CART),
-                    status=HTTPStatus.BAD_REQUEST,
-                )
-        if ShoppingCart.objects.filter(
-            recipe=recipe, user=request.user
-        ).exists():
-            ShoppingCart.objects.filter(
-                recipe=recipe, user=request.user
-            ).delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        return Response(
-            dict(error=RecipeError.NOT_IN_SHOPPING_CART),
-            status=HTTPStatus.BAD_REQUEST,
-        )
-
     @action(detail=False)
     def download_shopping_cart(self, request):
         shopping_cart = (
@@ -186,28 +156,51 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content, as_attachment=True, filename="shopping_list.txt"
         )
 
-    @action(
-        methods=("POST", "DELETE"),
-        detail=True,
-    )
-    def favorite(self, request, pk=None):
+    def _favorite_shopping_cart_logic(
+        self,
+        request,
+        error_message_add,
+        error_message_delete,
+        pk=None,
+        model=None,
+    ):
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == "POST":
             try:
-                Favorite.objects.create(recipe=recipe, user=request.user)
+                model.objects.create(recipe=recipe, user=request.user)
                 return Response(
                     serializers.ShortRecipeSerializer(recipe).data,
                     status=HTTPStatus.CREATED,
                 )
             except IntegrityError:
                 return Response(
-                    dict(error=RecipeError.ALREADY_FAVORITED),
+                    dict(error=error_message_add),
                     status=HTTPStatus.BAD_REQUEST,
                 )
-        if Favorite.objects.filter(recipe=recipe, user=request.user).exists():
-            Favorite.objects.filter(recipe=recipe, user=request.user).delete()
+        if model.objects.filter(recipe=recipe, user=request.user).exists():
+            model.objects.filter(recipe=recipe, user=request.user).delete()
             return Response(status=HTTPStatus.NO_CONTENT)
         return Response(
-            dict(error=RecipeError.NOT_FAVORITED),
+            dict(error=error_message_delete),
             status=HTTPStatus.BAD_REQUEST,
+        )
+
+    @action(detail=True, methods=("POST", "DELETE"))
+    def favorite(self, request, pk):
+        return self._favorite_shopping_cart_logic(
+            request,
+            error_message_add=RecipeError.ALREADY_FAVORITED,
+            error_message_delete=RecipeError.NOT_FAVORITED,
+            pk=pk,
+            model=Favorite,
+        )
+
+    @action(detail=True, methods=("POST", "DELETE"))
+    def shopping_cart(self, request, pk):
+        return self._favorite_shopping_cart_logic(
+            request,
+            error_message_add=RecipeError.ALREADY_IN_SHOPPING_CART,
+            error_message_delete=RecipeError.NOT_IN_SHOPPING_CART,
+            pk=pk,
+            model=ShoppingCart,
         )
