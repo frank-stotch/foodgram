@@ -7,11 +7,9 @@ from djoser.serializers import UserSerializer as DjoserUserSerializer
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueTogetherValidator
 
 from recipes.models import (
     Error as RecipeError,
-    Favorite,
     Ingredient,
     MIN_VALUE,
     Recipe,
