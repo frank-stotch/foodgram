@@ -63,7 +63,7 @@ class UserViewSet(DjoserUserViewSet):
         pagination_class=pagination.LimitPageNumberPagination,
     )
     def subscriptions(self, request):
-        queryset = User.objects.filter(subscribing__subscriber=request.user)
+        queryset = User.objects.filter(authors__subscribers=request.user)
         serializer = serializers.ReadSubscriptionSerializer(
             self.paginate_queryset(queryset),
             many=True,
@@ -89,7 +89,7 @@ class UserViewSet(DjoserUserViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data, status=HTTPStatus.CREATED)
-        subscription = user.subscriber.filter(author=author)
+        subscription = user.subscribers.filter(author=author)
         if subscription.exists():
             subscription.delete()
             return Response(status=HTTPStatus.NO_CONTENT)

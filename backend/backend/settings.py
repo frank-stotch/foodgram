@@ -194,3 +194,5 @@ EMAIL_FILE_PATH = "./email"
 USERNAME_PATTERN = r"[\w.@+-]"
 
 FORBIDDEN_USERNAMES = ("me",)
+
+AVATARS_PATH = "users/avatars"
