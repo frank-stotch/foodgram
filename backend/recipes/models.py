@@ -28,12 +28,15 @@ class VerboseName:
     RECIPE = "Рецепт"
     AMOUNT = "Мера"
     FAVORITE = "Избранное"
+    SHOPPING_CART = "Корзина покупок"
 
 
 class VerboseNamePlural:
     TAGS = "Теги"
     INGREDIENTS = "Продукты"
     RECIPES = "Рецепты"
+    FAVORITES = "Избранные рецепты"
+    SHOPPING_CARTS = "Корзины покупок"
 
 
 class FieldLength:
@@ -139,23 +142,15 @@ class Recipe(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("short_link", args=[str(self.pk)])
+        return reverse("recipes:short_link", args=[str(self.pk)])
 
 
-class BaseRecipeModel(models.Model):
+class RecipeIngredient(models.Model):
     recipe = models.ForeignKey(
         to=Recipe,
         on_delete=models.CASCADE,
         verbose_name=VerboseName.RECIPE,
     )
-
-    class Meta:
-        abstract = True
-        default_related_name = "%(class)ss"
-        ordering = ("recipe",)
-
-
-class RecipeIngredient(BaseRecipeModel):
     ingredient = models.ForeignKey(
         to=Ingredient,
         on_delete=models.CASCADE,
@@ -171,7 +166,9 @@ class RecipeIngredient(BaseRecipeModel):
         ],
     )
 
-    class Meta(BaseRecipeModel.Meta):
+    class Meta:
+        default_related_name = "%(class)ss"
+        ordering = ("recipe", "ingredient")
         constraints = (
             UniqueConstraint(
                 fields=("recipe", "ingredient"), name="unique_%(class)s"
@@ -182,15 +179,21 @@ class RecipeIngredient(BaseRecipeModel):
         return f"Ингредиент {self.ingredient} для рецепта {self.recipe}"
 
 
-class BaseUserRecipeModel(BaseRecipeModel):
+class BaseUserRecipeModel(models.Model):
     user = models.ForeignKey(
         to=User,
         on_delete=models.CASCADE,
         verbose_name="Пользователь",
     )
+    recipe = models.ForeignKey(
+        to=Recipe,
+        on_delete=models.CASCADE,
+        verbose_name=VerboseName.RECIPE,
+    )
 
-    class Meta(BaseRecipeModel.Meta):
+    class Meta:
         abstract = True
+        ordering = ("recipe",)
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "recipe"],
@@ -202,10 +205,10 @@ class BaseUserRecipeModel(BaseRecipeModel):
 class Favorite(BaseUserRecipeModel):
     class Meta(BaseUserRecipeModel.Meta):
         verbose_name = VerboseName.FAVORITE
-        verbose_name_plural = verbose_name
+        verbose_name_plural = VerboseNamePlural.FAVORITES
 
 
 class ShoppingCart(BaseUserRecipeModel):
     class Meta(BaseUserRecipeModel.Meta):
-        verbose_name = "Корзина покупок"
-        verbose_name_plural = verbose_name
+        verbose_name = VerboseName.SHOPPING_CART
+        verbose_name_plural = VerboseNamePlural.SHOPPING_CARTS
