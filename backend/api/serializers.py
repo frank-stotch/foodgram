@@ -8,6 +8,7 @@ from rest_framework.exceptions import ValidationError
 
 from recipes.models import (
     Error,
+    Favorite,
     Ingredient,
     MinValue,
     Recipe,
@@ -30,9 +31,12 @@ class UserSerializer(DjoserUserSerializer):
 
     def get_is_subscribed(self, author):
         user = self.context.get("request").user
-        return user.is_authenticated and Subscription.objects.filter(
-            author=author, subscriber=user
-        ).exists()
+        return (
+            user.is_authenticated
+            and Subscription.objects.filter(
+                author=author, subscriber=user
+            ).exists()
+        )
 
 
 class AvatarSerializer(serializers.ModelSerializer):
@@ -101,18 +105,21 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_is_in_shopping_cart(self, recipe):
-        user = self.context.get("request").user
+    @staticmethod
+    def _get_favorited_shopping_cart_logic(model, user, recipe):
         return (
             user.is_authenticated
-            and ShoppingCart.objects.filter(recipe=recipe, user=user).exists()
+            and model.objects.filter(recipe=recipe, user=user).exists()
+        )
+
+    def get_is_in_shopping_cart(self, recipe):
+        return self._get_favorited_shopping_cart_logic(
+            ShoppingCart, self.context["request"].user, recipe
         )
 
     def get_is_favorited(self, recipe):
-        user = self.context.get("request").user
-        return (
-            user.is_authenticated
-            and user.favorites.filter(recipe=recipe).exists()
+        return self._get_favorited_shopping_cart_logic(
+            Favorite, self.context["request"].user, recipe
         )
 
 
