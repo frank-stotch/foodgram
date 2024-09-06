@@ -1,6 +1,4 @@
-from base64 import b64decode
-
-from django.core.files.base import ContentFile
+from drf_extra_fields.fields import Base64ImageField
 from django.core.validators import MinValueValidator
 from django.db import transaction
 from djoser.serializers import UserSerializer as DjoserUserSerializer
@@ -20,16 +18,6 @@ from recipes.models import (
 
 
 User = get_user_model()
-
-
-class Base64ImageField(serializers.ImageField):
-    def to_internal_value(self, data):
-        if isinstance(data, str) and data.startswith("data:image"):
-            format, imgstr = data.split(";base64,")
-            ext = format.split("/")[-1]
-            data = ContentFile(b64decode(imgstr), name="temp." + ext)
-
-        return super().to_internal_value(data)
 
 
 class UserSerializer(DjoserUserSerializer):
@@ -156,17 +144,26 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
     def validate(self, data):
         tags = data.get("tags")
         ingredients = data.get("ingredients")
+        image = data.get("image")
         if not ingredients:
-            raise ValidationError(
+            raise serializers.ValidationError(
                 dict(ingredients="Должен быть хотя бы 1 ингредиент.")
             )
         if not tags:
-            raise ValidationError(dict(tags="Должен быть хотя бы 1 тег."))
+            raise serializers.ValidationError(
+                dict(tags="Должен быть хотя бы 1 тег.")
+            )
         if len(tags) != len(set(tags)):
             raise ValidationError("Дублирование в тэгах недопустимо.")
+        if not image:
+            raise serializers.ValidationError(
+                "Без изображения нельзя создать рецепт"
+            )
         ingredients_ids = [item["ingredient"].id for item in ingredients]
         if len(ingredients_ids) != len(set(ingredients_ids)):
-            raise ValidationError("Ингредиенты не должны повторяться")
+            raise serializers.ValidationError(
+                "Ингредиенты не должны повторяться"
+            )
         return super().validate(data)
 
     @transaction.atomic
