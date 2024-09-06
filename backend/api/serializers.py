@@ -12,6 +12,7 @@ from recipes.models import (
     MinValue,
     Recipe,
     RecipeIngredient,
+    ShoppingCart,
     Subscription,
     Tag,
 )
@@ -28,8 +29,9 @@ class UserSerializer(DjoserUserSerializer):
         fields = (*DjoserUserSerializer.Meta.fields, "avatar", "is_subscribed")
 
     def get_is_subscribed(self, author):
+        user = self.context.get("request").user
         return user.is_authenticated and Subscription.objects.filter(
-            author=author, subscriber=self.context.get("request").user
+            author=author, subscriber=user
         ).exists()
 
 
@@ -97,12 +99,13 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
             "is_in_shopping_cart",
             "is_favorited",
         )
+        read_only_fields = fields
 
     def get_is_in_shopping_cart(self, recipe):
         user = self.context.get("request").user
         return (
             user.is_authenticated
-            and user.shoppingcarts.filter(recipe=recipe).exists()
+            and ShoppingCart.objects.filter(recipe=recipe, user=user).exists()
         )
 
     def get_is_favorited(self, recipe):
