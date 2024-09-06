@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     # "corsheaders",
     "django_filters",
     "djoser",
-    "users",
     "recipes",
     "api",
 ]
@@ -165,18 +164,18 @@ REST_FRAMEWORK = {
 }
 
 DJOSER = {
-    'HIDE_USERS': False,
-    'SERIALIZERS': {
-        'user': 'api.serializers.UserSerializer',
-        'current_user': 'api.serializers.UserSerializer',
+    "HIDE_USERS": False,
+    "SERIALIZERS": {
+        "user": "api.serializers.UserSerializer",
+        "current_user": "api.serializers.UserSerializer",
     },
-    'PERMISSIONS': {
-        'user': ('djoser.permissions.CurrentUserOrAdminOrReadOnly',),
-        'user_list': ('rest_framework.permissions.AllowAny',),
+    "PERMISSIONS": {
+        "user": ("djoser.permissions.CurrentUserOrAdminOrReadOnly",),
+        "user_list": ("rest_framework.permissions.AllowAny",),
     },
 }
 
-AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "recipes.User"
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -196,4 +195,4 @@ USERNAME_PATTERN = r"[\w.@+-]"
 FORBIDDEN_USERNAMES = ("me",)
 
 AVATARS_PATH = "users/avatars"
-RECIPES_IMAGES_PATH = "recipes/images/",
+RECIPES_IMAGES_PATH = ("recipes/images/",)

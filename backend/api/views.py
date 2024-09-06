@@ -22,7 +22,7 @@ from recipes.models import (
     ShoppingCart,
     Tag,
 )
-from users.models import Error as UserError
+from recipes.models import Error
 
 
 User = get_user_model()
@@ -94,7 +94,7 @@ class UserViewSet(DjoserUserViewSet):
             subscription.delete()
             return Response(status=HTTPStatus.NO_CONTENT)
         return Response(
-            {"errors": UserError.ALREADY_SUBSCRIBED},
+            {"errors": Error.ALREADY_SUBSCRIBED},
             status=HTTPStatus.BAD_REQUEST,
         )
 

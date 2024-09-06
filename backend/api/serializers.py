@@ -9,14 +9,14 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
 from recipes.models import (
-    Error as RecipeError,
+    Error,
     Ingredient,
-    MIN_VALUE,
+    MinValue,
     Recipe,
     RecipeIngredient,
+    Subscription,
     Tag,
 )
-from users.models import Error as UserError, Subscription
 
 
 User = get_user_model()
@@ -86,7 +86,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
     amount = serializers.IntegerField(
         validators=[
             MinValueValidator(
-                limit_value=MIN_VALUE, message=RecipeError.AMOUNT
+                limit_value=MinValue.AMOUNT, message=Error.AMOUNT
             )
         ]
     )
@@ -241,12 +241,12 @@ class WriteSubscriptionSerializer(serializers.ModelSerializer):
         author = data.get("author")
         if author == subscriber:
             raise serializers.ValidationError(
-                UserError.CANNOT_SUBSCRIBE_TO_YOURSELF
+                Error.CANNOT_SUBSCRIBE_TO_YOURSELF
             )
         if Subscription.objects.filter(
             author=author, subscriber=subscriber
         ).exists():
-            raise serializers.ValidationError(UserError.ALREADY_SUBSCRIBED)
+            raise serializers.ValidationError(Error.ALREADY_SUBSCRIBED)
         return data
 
     def to_representation(self, instance):
