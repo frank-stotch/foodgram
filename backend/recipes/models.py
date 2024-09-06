@@ -186,9 +186,7 @@ class Recipe(models.Model):
         verbose_name=VerboseName.NAME,
         max_length=FieldLength.RECIPE_NAME,
     )
-    tags = models.ManyToManyField(
-        to=Tag, verbose_name=VerboseNamePlural.TAGS
-    )
+    tags = models.ManyToManyField(to=Tag, verbose_name=VerboseNamePlural.TAGS)
     ingredients = models.ManyToManyField(
         to=Ingredient,
         through="RecipeIngredient",
@@ -225,7 +223,7 @@ class Recipe(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("recipes:short_link", args=[str(self.pk)])
+        return reverse("short_link", args=[str(self.pk)])
 
 
 class RecipeIngredient(models.Model):
@@ -277,6 +275,7 @@ class BaseUserRecipeModel(models.Model):
     class Meta:
         abstract = True
         ordering = ("recipe",)
+        default_related_name = "%(class)ss"
         constraints = [
             models.UniqueConstraint(
                 fields=["user", "recipe"],

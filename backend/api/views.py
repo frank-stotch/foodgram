@@ -63,7 +63,7 @@ class UserViewSet(DjoserUserViewSet):
         pagination_class=pagination.LimitPageNumberPagination,
     )
     def subscriptions(self, request):
-        queryset = User.objects.filter(authors__subscribers=request.user)
+        queryset = User.objects.filter(authors__subscriber=request.user)
         serializer = serializers.ReadSubscriptionSerializer(
             self.paginate_queryset(queryset),
             many=True,
