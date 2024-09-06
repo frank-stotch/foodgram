@@ -28,11 +28,9 @@ class UserSerializer(DjoserUserSerializer):
         fields = (*DjoserUserSerializer.Meta.fields, "avatar", "is_subscribed")
 
     def get_is_subscribed(self, author):
-        user = self.context.get("request").user
-        return (
-            user.is_authenticated
-            and user.subscribers.filter(author=author).exists()
-        )
+        return user.is_authenticated and Subscription.objects.filter(
+            author=author, subscriber=self.context.get("request").user
+        ).exists()
 
 
 class AvatarSerializer(serializers.ModelSerializer):
