@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
@@ -8,7 +9,9 @@ from django.urls import reverse
 User = get_user_model()
 
 
-MIN_VALUE = 1
+class MinValue:
+    COOKING_TIME = 1
+    AMOUNT = 1
 
 
 class VerboseName:
@@ -16,15 +19,21 @@ class VerboseName:
     SLUG = "Идентификатор"
     TAG = "Тег"
     MEASUREMENT_UNIT = "Ед. измерения"
-    INGREDIENT = "Ингредиент"
+    INGREDIENT = "Продукт"
     AUTHOR = "Автор"
     IMAGE = "Изображение"
     TEXT = "Описание"
     COOKING_TIME = "Время приготовления (в минутах)"
     PUB_DATE = "Дата публикации"
     RECIPE = "Рецепт"
-    AMOUNT = "Количество"
+    AMOUNT = "Мера"
     FAVORITE = "Избранное"
+
+
+class VerboseNamePlural:
+    TAGS = "Теги"
+    INGREDIENTS = "Продукты"
+    RECIPES = "Рецепты"
 
 
 class FieldLength:
@@ -35,8 +44,8 @@ class FieldLength:
 
 
 class Error:
-    COOKING_TIME = f"Не менее {MIN_VALUE} мин. приготовления"
-    AMOUNT = f"Не менее {MIN_VALUE} ед. ингредиента"
+    COOKING_TIME = f"Не менее {MinValue.COOKING_TIME} мин. приготовления"
+    AMOUNT = f"Не менее {MinValue.AMOUNT} ед. ингредиента"
     ALREADY_IN_SHOPPING_CART = "Рецепт уже есть в списке покупок"
     ALREADY_FAVORITED = "Рецепт уже есть в избранном"
     NOT_IN_SHOPPING_CART = "Рецепта нет в списке покупок"
@@ -58,7 +67,7 @@ class Tag(models.Model):
 
     class Meta:
         verbose_name = VerboseName.TAG
-        verbose_name_plural = verbose_name + "и"
+        verbose_name_plural = VerboseNamePlural.TAGS
         default_related_name = "%(class)ss"
         ordering = ("name",)
 
@@ -78,7 +87,7 @@ class Ingredient(models.Model):
 
     class Meta:
         verbose_name = VerboseName.INGREDIENT
-        verbose_name_plural = verbose_name + "ы"
+        verbose_name_plural = VerboseNamePlural.INGREDIENTS
         default_related_name = "%(class)ss"
         ordering = ("name",)
 
@@ -92,26 +101,26 @@ class Recipe(models.Model):
         max_length=FieldLength.RECIPE_NAME,
     )
     tags = models.ManyToManyField(
-        to=Tag, through="RecipeTag", verbose_name=VerboseName.TAG + "и"
+        to=Tag, verbose_name=VerboseNamePlural.TAGS
     )
     ingredients = models.ManyToManyField(
         to=Ingredient,
         through="RecipeIngredient",
-        verbose_name=VerboseName.INGREDIENT + "ы",
+        verbose_name=VerboseNamePlural.INGREDIENTS,
     )
     author = models.ForeignKey(
         to=User, on_delete=models.CASCADE, verbose_name=VerboseName.AUTHOR
     )
     image = models.ImageField(
         verbose_name=VerboseName.IMAGE,
-        upload_to="recipes/images/",
+        upload_to=settings.RECIPES_IMAGES_PATH,
     )
     text = models.TextField(verbose_name=VerboseName.TEXT)
     cooking_time = models.PositiveIntegerField(
         verbose_name=VerboseName.COOKING_TIME,
         validators=[
             MinValueValidator(
-                limit_value=MIN_VALUE,
+                limit_value=MinValue.COOKING_TIME,
                 message=Error.COOKING_TIME,
             )
         ],
@@ -122,7 +131,7 @@ class Recipe(models.Model):
 
     class Meta:
         verbose_name = VerboseName.RECIPE
-        verbose_name_plural = verbose_name + "ы"
+        verbose_name_plural = VerboseNamePlural.RECIPES
         default_related_name = "%(class)ss"
         ordering = ("-pub_date",)
 
@@ -146,22 +155,6 @@ class BaseRecipeModel(models.Model):
         ordering = ("recipe",)
 
 
-class RecipeTag(BaseRecipeModel):
-    tag = models.ForeignKey(
-        to=Tag, on_delete=models.CASCADE, verbose_name=VerboseName.TAG
-    )
-
-    class Meta(BaseRecipeModel.Meta):
-        constraints = (
-            UniqueConstraint(
-                fields=("recipe", "tag"), name="unique_%(class)s"
-            ),
-        )
-
-    def __str__(self) -> str:
-        return f"Тег {self.tag} для рецепта {self.recipe}"
-
-
 class RecipeIngredient(BaseRecipeModel):
     ingredient = models.ForeignKey(
         to=Ingredient,
@@ -172,7 +165,7 @@ class RecipeIngredient(BaseRecipeModel):
         verbose_name=VerboseName.AMOUNT,
         validators=[
             MinValueValidator(
-                limit_value=MIN_VALUE,
+                limit_value=MinValue.AMOUNT,
                 message=Error.AMOUNT,
             )
         ],
