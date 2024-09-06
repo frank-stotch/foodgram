@@ -205,7 +205,7 @@ class ReadSubscriptionSerializer(UserSerializer):
     recipes_count = serializers.ReadOnlyField(source="recipes.count")
 
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ("recipes", "recipes_count")
+        fields = (*UserSerializer.Meta.fields, "recipes", "recipes_count")
 
     def get_recipes(self, user):
         request = self.context.get("request")
