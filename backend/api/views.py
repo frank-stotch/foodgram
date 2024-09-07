@@ -148,9 +148,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, url_path="get-link")
     def get_link(self, request, pk=None):
-        recipe = self.get_object()
-        link = request.build_absolute_uri(recipe.get_absolute_url())
-        return Response({"short-link": link}, status=HTTPStatus.OK)
+        return Response(
+            {
+                "short-link": request.build_absolute_uri(
+                    self.get_object().get_absolute_url()
+                )
+            },
+            status=HTTPStatus.OK,
+        )
 
     @action(detail=False)
     def download_shopping_cart(self, request):
