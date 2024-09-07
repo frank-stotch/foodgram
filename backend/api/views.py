@@ -14,15 +14,15 @@ from rest_framework.response import Response
 
 from . import filters, pagination, permissions, serializers
 from recipes.models import (
-    Error as RecipeError,
+    Error,
     Favorite,
     Ingredient,
     Recipe,
     RecipeIngredient,
+    Subscription,
     ShoppingCart,
     Tag,
 )
-from recipes.models import Error
 
 
 User = get_user_model()
@@ -46,14 +46,13 @@ class UserViewSet(DjoserUserViewSet):
         user = request.user
         if request.method == "PUT":
             serializer = serializers.AvatarSerializer(data=request.data)
-            if serializer.is_valid():
-                user.avatar = serializer.validated_data["avatar"]
-                user.save()
-                return Response(
-                    serializers.AvatarSerializer(user).data,
-                    status=HTTPStatus.OK,
-                )
-            return Response(serializer.errors, status=HTTPStatus.BAD_REQUEST)
+            serializer.is_valid(raise_exception=True)
+            user.avatar = serializer.validated_data["avatar"]
+            user.save()
+            return Response(
+                serializers.AvatarSerializer(user).data,
+                status=HTTPStatus.OK,
+            )
         user.avatar.delete(save=True)
         return Response(status=HTTPStatus.NO_CONTENT)
 
@@ -79,24 +78,42 @@ class UserViewSet(DjoserUserViewSet):
         ),
     )
     def subscribe(self, request, id):
-        user = request.user
+        subscriber = request.user
         author = get_object_or_404(User, pk=id)
         if request.method == "POST":
-            serializer = serializers.WriteSubscriptionSerializer(
-                data={"subscriber": user.pk, "author": author.pk},
-                context={"request": request},
+            if author == subscriber:
+                return Response(
+                    dict(errors=Error.CANNOT_SUBSCRIBE_TO_YOURSELF),
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+            if Subscription.objects.filter(
+                author=author, subscriber=subscriber
+            ).exists():
+                return Response(
+                    dict(errors=Error.ALREADY_SUBSCRIBED),
+                    status=HTTPStatus.BAD_REQUEST,
+                )
+            Subscription.objects.create(author=author, subscriber=subscriber)
+            return Response(
+                serializers.ReadSubscriptionSerializer(
+                    author, context={"request": request}
+                ).data,
+                status=HTTPStatus.CREATED,
             )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data, status=HTTPStatus.CREATED)
-        subscription = user.subscribers.filter(author=author)
-        if subscription.exists():
-            subscription.delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        return Response(
-            {"errors": Error.ALREADY_SUBSCRIBED},
-            status=HTTPStatus.BAD_REQUEST,
-        )
+        if not Subscription.objects.filter(
+            author=author, subscriber=subscriber
+        ).exists():
+            return Response(
+                dict(errors=Error.NOT_SUBSCRIBED),
+                status=HTTPStatus.BAD_REQUEST,
+            )
+        # Нельзя заменить на get_object_or_404(...).delete()
+        # потому что в случае некорректного запроса надо вернуть
+        # статус 400 Bad Request
+        Subscription.objects.filter(
+            author=author, subscriber=subscriber
+        ).delete()
+        return Response(status=HTTPStatus.NO_CONTENT)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -189,8 +206,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def favorite(self, request, pk):
         return self._favorite_shopping_cart_logic(
             request,
-            error_message_add=RecipeError.ALREADY_FAVORITED,
-            error_message_delete=RecipeError.NOT_FAVORITED,
+            error_message_add=Error.ALREADY_FAVORITED,
+            error_message_delete=Error.NOT_FAVORITED,
             pk=pk,
             model=Favorite,
         )
@@ -199,8 +216,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def shopping_cart(self, request, pk):
         return self._favorite_shopping_cart_logic(
             request,
-            error_message_add=RecipeError.ALREADY_IN_SHOPPING_CART,
-            error_message_delete=RecipeError.NOT_IN_SHOPPING_CART,
+            error_message_add=Error.ALREADY_IN_SHOPPING_CART,
+            error_message_delete=Error.NOT_IN_SHOPPING_CART,
             pk=pk,
             model=ShoppingCart,
         )
