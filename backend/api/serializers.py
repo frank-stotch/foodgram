@@ -4,7 +4,6 @@ from django.db import transaction
 from djoser.serializers import UserSerializer as DjoserUserSerializer
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 
 from recipes.models import (
     Error,
@@ -124,11 +123,26 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
 
 
 class WriteRecipeSerializer(serializers.ModelSerializer):
-    ingredients = RecipeIngredientSerializer(many=True)
-    tags = serializers.PrimaryKeyRelatedField(
-        many=True, queryset=Tag.objects.all(), required=True
+    # Отдельная явная валидация меры не нужна, потому что сериализатор
+    # модели и так проводит валидацию.
+    # Единственное, что полезного даёт
+    # использование ListField(allow_empty=False) — более правильную ошибку,
+    # если в запросе совсем не будет полей с продуктами или тегами.
+    ingredients = serializers.ListField(
+        child=RecipeIngredientSerializer(),
+        allow_empty=False,
+        required=True,
     )
-    image = Base64ImageField()
+    tags = serializers.ListField(
+        child=serializers.PrimaryKeyRelatedField(
+            queryset=Tag.objects.all(),
+        ),
+        allow_empty=False,
+        required=True,
+    )
+    image = Base64ImageField(
+        allow_empty_file=False, required=True
+    )
 
     class Meta:
         model = Recipe
@@ -141,33 +155,46 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
             "cooking_time",
         )
 
-    def validate(self, data):
-        tags = data.get("tags")
-        ingredients = data.get("ingredients")
-        image = data.get("image")
-        if not ingredients:
-            raise serializers.ValidationError(
-                dict(ingredients="Должен быть хотя бы 1 ингредиент.")
-            )
-        if not tags:
-            raise serializers.ValidationError(
-                dict(tags="Должен быть хотя бы 1 тег.")
-            )
-        if len(tags) != len(set(tags)):
-            raise ValidationError("Дублирование в тэгах недопустимо.")
-        if not image:
-            raise serializers.ValidationError(
-                "Без изображения нельзя создать рецепт"
-            )
-        ingredients_ids = [item["ingredient"].id for item in ingredients]
-        if len(ingredients_ids) != len(set(ingredients_ids)):
-            raise serializers.ValidationError(
-                "Ингредиенты не должны повторяться"
-            )
-        return super().validate(data)
+    @staticmethod
+    def _check_existence(item, empty_error):
+        if not item:
+            raise serializers.ValidationError(empty_error)
 
-    @transaction.atomic
-    def _save_ingredients(self, recipe, ingredients):
+    @staticmethod
+    def _check_duplicates(array, duplicates_error):
+        uniques = set()
+        duplicates = set()
+        for item in array:
+            if item in uniques:
+                duplicates.add(item)
+            else:
+                uniques.add(item)
+        if duplicates:
+            duplicates = ", ".join(map(str, duplicates))
+            raise serializers.ValidationError(
+                duplicates_error.format(duplicates)
+            )
+
+    def validate(self, data):
+        # Обойтись serializers.ListField(allow_empty=False, required=True),
+        # не получится. Причина: он не отработает в методе update.
+        # Статические методы я, конечно, создал. Кода остался в сущности,
+        # тем же, просто выглядит более аккуратно.
+        tags = data.get("tags")
+        self._check_existence(tags, Error.NO_TAGS)
+        self._check_duplicates([tag.id for tag in tags], Error.DUPLICATE_TAGS)
+        ingredients = data.get("ingredients")
+        self._check_existence(ingredients, Error.NO_INGREDIENTS)
+        self._check_duplicates(
+            [ingredient["ingredient"].id for ingredient in ingredients],
+            Error.DUPLICATE_INGREDIENTS,
+        )
+        image = data.get("image")
+        self._check_existence(image, Error.NO_IMAGE)
+        return data
+
+    @staticmethod
+    def _save_ingredients(recipe, ingredients):
         RecipeIngredient.objects.bulk_create(
             RecipeIngredient(
                 recipe=recipe,
@@ -217,36 +244,7 @@ class ReadSubscriptionSerializer(UserSerializer):
 
     def get_recipes(self, user):
         request = self.context.get("request")
-        recipes_limit = request.GET.get("recipes_limit")
-        recipes = user.recipes.all()
-        if recipes_limit and recipes_limit.isnumeric():
-            recipes = recipes[: int(recipes_limit)]
-        serializer = ShortRecipeSerializer(
-            recipes, context=self.context, many=True
-        )
-        return serializer.data
-
-
-class WriteSubscriptionSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Subscription
-        fields = ("author", "subscriber")
-
-    def validate(self, data):
-        subscriber = data.get("subscriber")
-        author = data.get("author")
-        if author == subscriber:
-            raise serializers.ValidationError(
-                Error.CANNOT_SUBSCRIBE_TO_YOURSELF
-            )
-        if Subscription.objects.filter(
-            author=author, subscriber=subscriber
-        ).exists():
-            raise serializers.ValidationError(Error.ALREADY_SUBSCRIBED)
-        return data
-
-    def to_representation(self, instance):
-        return ReadSubscriptionSerializer(
-            instance.author, context=self.context
+        recipes_limit = int(request.GET.get('recipes_limit', 10**10))
+        return ShortRecipeSerializer(
+            user.recipes.all()[:recipes_limit], context=self.context, many=True
         ).data
