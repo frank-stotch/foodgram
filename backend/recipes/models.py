@@ -75,6 +75,7 @@ class Error:
     NO_TAGS = "Массив тегов не  может быть пустым"
     DUPLICATE_TAGS = "Повторяющиеся теги: {}"
     NO_IMAGE = "Поле 'image' не может быть пустым"
+    NOT_SUBSCRIBED = "Вы не подписаны на этого автора"
 
 
 class User(AbstractUser):
