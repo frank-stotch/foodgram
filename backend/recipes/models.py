@@ -70,6 +70,11 @@ class Error:
     NOT_FAVORITED = "Рецепта нет в избранном"
     ALREADY_SUBSCRIBED = "Вы уже подписаны на этого автора"
     CANNOT_SUBSCRIBE_TO_YOURSELF = "Нельзя подписаться на самого себя"
+    NO_INGREDIENTS = "Массив ингредиентов не может быть пустым"
+    DUPLICATE_INGREDIENTS = "Повторяющиеся продукты: {}"
+    NO_TAGS = "Массив тегов не  может быть пустым"
+    DUPLICATE_TAGS = "Повторяющиеся теги: {}"
+    NO_IMAGE = "Поле 'image' не может быть пустым"
 
 
 class User(AbstractUser):
