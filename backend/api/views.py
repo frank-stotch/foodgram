@@ -178,8 +178,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             content, as_attachment=True, filename="shopping_list.txt"
         )
 
+    @staticmethod
     def _favorite_shopping_cart_logic(
-        self,
         request,
         error_message_add,
         error_message_delete,
