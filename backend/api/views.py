@@ -175,7 +175,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def _favorite_shopping_cart_logic(
         request,
         error_message_add,
-        error_message_delete,
         pk,
         model,
     ):
@@ -193,20 +192,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
                 dict(error=error_message_add),
                 status=HTTPStatus.BAD_REQUEST,
             )
-        if model.objects.filter(recipe=recipe, user=request.user).exists():
-            model.objects.filter(recipe=recipe, user=request.user).delete()
-            return Response(status=HTTPStatus.NO_CONTENT)
-        return Response(
-            dict(error=error_message_delete),
-            status=HTTPStatus.BAD_REQUEST,
-        )
+        get_object_or_404(model, recipe=recipe, user=request.user).delete()
+        return Response(status=HTTPStatus.NO_CONTENT)
 
     @action(detail=True, methods=("POST", "DELETE"))
     def favorite(self, request, pk):
         return self._favorite_shopping_cart_logic(
             request,
             error_message_add=Error.ALREADY_FAVORITED,
-            error_message_delete=Error.NOT_FAVORITED,
             pk=pk,
             model=Favorite,
         )
@@ -216,7 +209,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return self._favorite_shopping_cart_logic(
             request,
             error_message_add=Error.ALREADY_IN_SHOPPING_CART,
-            error_message_delete=Error.NOT_IN_SHOPPING_CART,
             pk=pk,
             model=ShoppingCart,
         )
