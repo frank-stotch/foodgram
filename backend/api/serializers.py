@@ -166,23 +166,13 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
     def validate_tags(self, tags):
         self._check_duplicates([tag.id for tag in tags], Error.DUPLICATE_TAGS)
         return tags
-    
+
     def validate_ingredients(self, ingredients):
         self._check_duplicates(
             [item["ingredient"].id for item in ingredients],
             Error.DUPLICATE_INGREDIENTS,
         )
         return ingredients
-
-    # def validate(self, data):
-    #     tags = data.get("tags")
-    #     ingredients = data.get("ingredients")
-    #     self._check_duplicates([tag.id for tag in tags], Error.DUPLICATE_TAGS)
-    #     self._check_duplicates(
-    #         [item["ingredient"].id for item in ingredients],
-    #         Error.DUPLICATE_INGREDIENTS,
-    #     )
-    #     return super().validate(data)
 
     @staticmethod
     def _save_ingredients(recipe, ingredients):
