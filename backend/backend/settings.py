@@ -195,4 +195,4 @@ USERNAME_PATTERN = r"[\w.@+-]"
 FORBIDDEN_USERNAMES = ("me",)
 
 AVATARS_PATH = "users/avatars"
-RECIPES_IMAGES_PATH = ("recipes/images/",)
+RECIPES_IMAGES_PATH = "recipes/images/"
