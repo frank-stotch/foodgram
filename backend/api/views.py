@@ -176,8 +176,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         request,
         error_message_add,
         error_message_delete,
-        pk=None,
-        model=None,
+        pk,
+        model,
     ):
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == "POST":
