@@ -149,7 +149,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         )
 
     @staticmethod
-    def _check_duplicates(array, duplicates_error):
+    def _check_duplicates(array, error_message):
         uniques = set()
         duplicates = set()
         for item in array:
@@ -160,7 +160,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         if duplicates:
             duplicates = ", ".join(map(str, duplicates))
             raise serializers.ValidationError(
-                duplicates_error.format(duplicates)
+                error_message.format(duplicates)
             )
 
     def validate_tags(self, tags):
