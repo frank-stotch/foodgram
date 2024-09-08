@@ -100,18 +100,8 @@ class UserViewSet(DjoserUserViewSet):
                 ).data,
                 status=HTTPStatus.CREATED,
             )
-        if not Subscription.objects.filter(
-            author=author, subscriber=subscriber
-        ).exists():
-            return Response(
-                dict(errors=Error.NOT_SUBSCRIBED),
-                status=HTTPStatus.BAD_REQUEST,
-            )
-        # Нельзя заменить на get_object_or_404(...).delete()
-        # потому что в случае некорректного запроса надо вернуть
-        # статус 400 Bad Request
-        Subscription.objects.filter(
-            author=author, subscriber=subscriber
+        get_object_or_404(
+            Subscription, author=author, subscriber=subscriber
         ).delete()
         return Response(status=HTTPStatus.NO_CONTENT)
 
@@ -144,8 +134,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return serializers.WriteRecipeSerializer
 
     def get_serializer(self, *args, **kwargs):
-        if self.request.method == 'PATCH':
-            kwargs['partial'] = False
+        if self.request.method == "PATCH":
+            kwargs["partial"] = False
         return super().get_serializer(*args, **kwargs)
 
     def perform_create(self, serializer):
