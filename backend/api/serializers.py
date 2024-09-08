@@ -123,11 +123,6 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
 
 
 class WriteRecipeSerializer(serializers.ModelSerializer):
-    # Отдельная явная валидация меры не нужна, потому что сериализатор
-    # модели и так проводит валидацию.
-    # Единственное, что полезного даёт
-    # использование ListField(allow_empty=False) — более правильную ошибку,
-    # если в запросе совсем не будет полей с продуктами или тегами.
     ingredients = serializers.ListField(
         child=RecipeIngredientSerializer(),
         allow_empty=False,
@@ -140,9 +135,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         allow_empty=False,
         required=True,
     )
-    image = Base64ImageField(
-        allow_empty_file=False, required=True
-    )
+    image = Base64ImageField(allow_empty_file=False, required=True)
 
     class Meta:
         model = Recipe
@@ -154,11 +147,6 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
             "text",
             "cooking_time",
         )
-
-    @staticmethod
-    def _check_existence(item, empty_error):
-        if not item:
-            raise serializers.ValidationError(empty_error)
 
     @staticmethod
     def _check_duplicates(array, duplicates_error):
@@ -176,22 +164,14 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
             )
 
     def validate(self, data):
-        # Обойтись serializers.ListField(allow_empty=False, required=True),
-        # не получится. Причина: он не отработает в методе update.
-        # Статические методы я, конечно, создал. Кода остался в сущности,
-        # тем же, просто выглядит более аккуратно.
         tags = data.get("tags")
-        self._check_existence(tags, Error.NO_TAGS)
-        self._check_duplicates([tag.id for tag in tags], Error.DUPLICATE_TAGS)
         ingredients = data.get("ingredients")
-        self._check_existence(ingredients, Error.NO_INGREDIENTS)
+        self._check_duplicates([tag.id for tag in tags], Error.DUPLICATE_TAGS)
         self._check_duplicates(
-            [ingredient["ingredient"].id for ingredient in ingredients],
+            [item["ingredient"].id for item in ingredients],
             Error.DUPLICATE_INGREDIENTS,
         )
-        image = data.get("image")
-        self._check_existence(image, Error.NO_IMAGE)
-        return data
+        return super().validate(data)
 
     @staticmethod
     def _save_ingredients(recipe, ingredients):
@@ -244,7 +224,7 @@ class ReadSubscriptionSerializer(UserSerializer):
 
     def get_recipes(self, user):
         request = self.context.get("request")
-        recipes_limit = int(request.GET.get('recipes_limit', 10**10))
+        recipes_limit = int(request.GET.get("recipes_limit", 10**10))
         return ShortRecipeSerializer(
             user.recipes.all()[:recipes_limit], context=self.context, many=True
         ).data
