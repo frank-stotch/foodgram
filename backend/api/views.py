@@ -5,14 +5,13 @@ from django.db import IntegrityError
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 
-from . import filters, pagination, permissions, serializers
+from . import filters, pagination, permissions, serializers, utils
 from recipes.models import (
     Error,
     Favorite,
@@ -158,20 +157,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
             RecipeIngredient.objects.filter(
                 recipe__shoppingcarts__user=request.user
             )
-            .values("ingredient__name", "ingredient__measurement_unit")
+            .values(
+                "ingredient__name",
+                "ingredient__measurement_unit",
+                "recipe__name",
+            )
             .annotate(amount=Sum("amount"))
             .order_by("ingredient__name")
         )
-        content = ["Список покупок:"]
-        for item in shopping_cart:
-            content.append(
-                f"{item['ingredient__name']} - {item['amount']}"
-                f" {item['ingredient__measurement_unit']}\n"
-            )
-        content = "\n".join(content)
-        return FileResponse(
-            content, as_attachment=True, filename="shopping_list.txt"
-        )
+        return utils.make_shopping_cart_file(shopping_cart)
 
     @staticmethod
     def _favorite_shopping_cart_logic(
