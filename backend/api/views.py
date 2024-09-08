@@ -160,12 +160,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .values(
                 "ingredient__name",
                 "ingredient__measurement_unit",
-                "recipe__name",
             )
             .annotate(amount=Sum("amount"))
             .order_by("ingredient__name")
         )
-        return utils.make_shopping_cart_file(shopping_cart)
+        unique_recipes = (
+            ShoppingCart.objects.filter(user=request.user)
+            .values_list("recipe__name", flat=True)
+            .distinct()
+        )
+        return utils.make_shopping_cart_file(shopping_cart, unique_recipes)
 
     @staticmethod
     def _favorite_shopping_cart_logic(

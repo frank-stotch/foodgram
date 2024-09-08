@@ -5,28 +5,25 @@ from django.utils import timezone
 TIME_FORMAT = "%d-%m-%Y %H:%M"
 
 
-def make_shopping_cart_file(shopping_cart):
+def make_shopping_cart_file(shopping_cart, unique_recipes):
     current_time = timezone.now().strftime(TIME_FORMAT)
     ingredients = []
     recipes = []
-    recipes_names = []
     for index, item in enumerate(shopping_cart, start=1):
         ingredients.append(
-            f"{index}. "
-            f"{item['ingredient__name']} - {item['amount']}"
-            f" {item['ingredient__measurement_unit']}"
+            f"{index}. {item['ingredient__name'].capitalize()} "
+            f"- {item['amount']} "
+            f"{item['ingredient__measurement_unit']}"
         )
-        recipes.append(item["recipe__name"])
-    print(f"{recipes_names = }")
-    for index, item in enumerate(set(recipes), start=1):
-        recipes_names.append(f"{index}. {item}")
+    for index, item in enumerate(unique_recipes, start=1):
+        recipes.append(f"{index}. {item.capitalize()}")
     content = "\n".join(
         [
             f"Дата и время: {current_time}",
             "\nСписок покупок:",
             *ingredients,
             "\nСписок рецептов:",
-            *recipes_names,
+            *recipes,
         ]
     )
     return FileResponse(
