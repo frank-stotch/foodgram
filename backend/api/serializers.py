@@ -174,6 +174,11 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         )
         return ingredients
 
+    def validate_image(self, image):
+        if not image:
+            raise serializers.ValidationError(Error.NO_IMAGE)
+        return image
+
     @staticmethod
     def _save_ingredients(recipe, ingredients):
         RecipeIngredient.objects.bulk_create(
