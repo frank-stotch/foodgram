@@ -181,17 +181,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
     ):
         recipe = get_object_or_404(Recipe, pk=pk)
         if request.method == "POST":
-            try:
-                model.objects.create(recipe=recipe, user=request.user)
+            item, created = model.objects.get_or_create(
+                user=request.user, recipe=recipe
+            )
+            if created:
                 return Response(
                     serializers.ShortRecipeSerializer(recipe).data,
                     status=HTTPStatus.CREATED,
                 )
-            except IntegrityError:
-                return Response(
-                    dict(error=error_message_add),
-                    status=HTTPStatus.BAD_REQUEST,
-                )
+            return Response(
+                dict(error=error_message_add),
+                status=HTTPStatus.BAD_REQUEST,
+            )
         if model.objects.filter(recipe=recipe, user=request.user).exists():
             model.objects.filter(recipe=recipe, user=request.user).delete()
             return Response(status=HTTPStatus.NO_CONTENT)
