@@ -4,6 +4,9 @@ from rest_framework.routers import SimpleRouter
 from . import views
 
 
+app_name = "api"
+
+
 router_v1 = SimpleRouter()
 
 router_v1.register(
