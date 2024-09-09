@@ -1,28 +1,13 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import Group
 from django.utils.html import format_html
+from rest_framework.authtoken.models import TokenProxy
 
-from .models import User, Subscription, Recipe
+from .models import Subscription, User, Recipe
 
-
-class RecipeInline(admin.TabularInline):
-    model = Recipe
-    extra = 0
-
-
-class SubscriptionInline(admin.TabularInline):
-    model = Subscription
-    fk_name = "subscriber"
-    extra = 0
-    verbose_name = "Подписка на автора"
-    verbose_name_plural = "Подписки на авторов"
-
-
-class SubscriberInline(admin.TabularInline):
-    model = Subscription
-    fk_name = "author"
-    extra = 0
-    verbose_name = "Подписчик"
-    verbose_name_plural = "Подписчики"
+admin.site.unregister(Group)
+admin.site.unregister(TokenProxy)
 
 
 class HasRecipesFilter(admin.SimpleListFilter):
@@ -31,15 +16,16 @@ class HasRecipesFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return (
-            ("yes", "Есть рецепты"),
-            ("no", "Нет рецептов"),
+            ("yes", "Да"),
+            ("no", "Нет"),
         )
 
     def queryset(self, request, queryset):
         if self.value() == "yes":
             return queryset.filter(recipes__isnull=False).distinct()
         if self.value() == "no":
-            return queryset.filter(recipes__isnull=True).distinct()
+            return queryset.filter(recipes__isnull=True)
+        return queryset
 
 
 class HasSubscriptionsFilter(admin.SimpleListFilter):
@@ -48,15 +34,16 @@ class HasSubscriptionsFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return (
-            ("yes", "Есть подписки"),
-            ("no", "Нет подписок"),
+            ("yes", "Да"),
+            ("no", "Нет"),
         )
 
     def queryset(self, request, queryset):
         if self.value() == "yes":
             return queryset.filter(subscribers__isnull=False).distinct()
         if self.value() == "no":
-            return queryset.filter(subscribers__isnull=True).distinct()
+            return queryset.filter(subscribers__isnull=True)
+        return queryset
 
 
 class HasSubscribersFilter(admin.SimpleListFilter):
@@ -65,58 +52,66 @@ class HasSubscribersFilter(admin.SimpleListFilter):
 
     def lookups(self, request, model_admin):
         return (
-            ("yes", "Есть подписчики"),
-            ("no", "Нет подписчиков"),
+            ("yes", "Да"),
+            ("no", "Нет"),
         )
 
     def queryset(self, request, queryset):
         if self.value() == "yes":
             return queryset.filter(authors__isnull=False).distinct()
         if self.value() == "no":
-            return queryset.filter(authors__isnull=True).distinct()
+            return queryset.filter(authors__isnull=True)
+        return queryset
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(BaseUserAdmin):
+    readonly_fields = (
+        "subscribers_count",
+        "subscriptions_count",
+        "recipes_count",
+    )
     list_display = (
+        "id",
         "username",
         "email",
         "first_name",
         "last_name",
         "avatar_display",
-        "recipe_count",
-        "subscription_count",
-        "subscriber_count",
-    )
-    search_fields = ("username", "email")
+    ) + readonly_fields
     list_filter = (
         HasRecipesFilter,
         HasSubscriptionsFilter,
         HasSubscribersFilter,
     )
-    inlines = [RecipeInline, SubscriptionInline, SubscriberInline]
+    search_fields = ("username", "email", "first_name", "last_name")
+    ordering = ("id",)
 
+    def subscribers_count(self, obj):
+        return Subscription.objects.filter(author=obj).count()
+
+    subscribers_count.short_description = "Количество подписчиков"
+
+    def subscriptions_count(self, obj):
+        return Subscription.objects.filter(subscriber=obj).count()
+
+    subscriptions_count.short_description = "Количество подписок"
+
+    def recipes_count(self, obj):
+        return Recipe.objects.filter(author=obj).count()
+
+    recipes_count.short_description = "Количество рецептов"
+
+    @admin.display(description="Аватар")
     def avatar_display(self, obj):
         if obj.avatar:
             return format_html(
-                '<img src="{}" width="50" height="50" style="object-fit:cover; border-radius:50%;" />',
+                '<img src="{}" width="50" height="50" style="object-fit: cover;" />',
                 obj.avatar.url,
             )
         return "-"
 
-    avatar_display.short_description = "Аватар"
 
-    def recipe_count(self, obj):
-        return obj.recipes.count()
-
-    recipe_count.short_description = "Число рецептов"
-
-    def subscription_count(self, obj):
-        return obj.subscribers.count()
-
-    subscription_count.short_description = "Число подписок"
-
-    def subscriber_count(self, obj):
-        return obj.authors.count()
-
-    subscriber_count.short_description = "Число подписчиков"
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ("subscriber", "author")
