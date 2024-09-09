@@ -136,7 +136,8 @@ class UserAdmin(BaseUserAdmin):
                     'style="object-fit: cover;" />'
                     "</a>"
                 ),
-                obj.avatar.url, obj.avatar.url
+                obj.avatar.url,
+                obj.avatar.url,
             )
         return "-"
 
@@ -193,36 +194,42 @@ class RecipeAdmin(admin.ModelAdmin):
         "text",
         "cooking_time",
         "count_in_favorite",
-        "tags_list",  # Добавляем метод для отображения тегов
+        "tags_list",
+        "ingredients_list",
     )
-    list_filter = (
-        "tags",
-        "author",
-        "cooking_time",
-    )
-    search_fields = ("name",)
-
-    def get_queryset(self, request):
-        queryset = super().get_queryset(request)
-        return queryset.annotate(
-            count_in_favorite=Count("favorites", distinct=True)
-        )
+    list_filter = ("tags", "author", "name")
 
     @admin.display(description="Счетчик в избранном")
     def count_in_favorite(self, recipe):
-        return recipe.count_in_favorite
+        return recipe.favorites.count()
 
-    @admin.display(description="Изображение")
+    @admin.display(description='Изображение')
     def image_display(self, obj):
         if obj.image:
-            img_tag = (
+            image_url = obj.image.url
+            return format_html(
                 '<a href="{}" target="_blank">'
                 '<img src="{}" width="100" height="100" '
                 'style="object-fit: cover;" />'
-                '</a>'
+                '</a>',
+                image_url,
+                image_url
             )
-            return format_html(img_tag, obj.image.url, obj.image.url)
         return "-"
+
+    @admin.display(description="Ингредиенты")
+    def ingredients_list(self, obj):
+        ingredient_lines = [
+            (
+                f"{recipe_ingredient.ingredient.name} - "
+                f"{recipe_ingredient.amount} "
+                f"{recipe_ingredient.ingredient.measurement_unit}"
+            )
+            for recipe_ingredient in obj.recipeingredients.select_related(
+                "ingredient"
+            )
+        ]
+        return format_html("<br>".join(ingredient_lines))
 
     @admin.display(description="Теги")
     def tags_list(self, obj):
