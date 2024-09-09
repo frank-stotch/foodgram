@@ -96,7 +96,7 @@ class User(AbstractUser):
         verbose_name=VerboseName.FIRST_NAME, max_length=FieldLength.FIRST_NAME
     )
     last_name = models.CharField(
-        verbose_name=VerboseName.FIRST_NAME, max_length=FieldLength.LAST_NAME
+        verbose_name=VerboseName.LAST_NAME, max_length=FieldLength.LAST_NAME
     )
     avatar = models.ImageField(
         verbose_name=VerboseName.AVATAR,
