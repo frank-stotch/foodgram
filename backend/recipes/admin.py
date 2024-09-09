@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.db.models import Count
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from rest_framework.authtoken.models import TokenProxy
 
 from .models import (
@@ -131,10 +131,12 @@ class UserAdmin(BaseUserAdmin):
         if obj.avatar:
             return format_html(
                 (
+                    '<a href="{}" target="_blank">'
                     '<img src="{}" width="100" height="100" '
                     'style="object-fit: cover;" />'
+                    "</a>"
                 ),
-                obj.avatar.url,
+                obj.avatar.url, obj.avatar.url
             )
         return "-"
 
@@ -187,10 +189,11 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "author",
-        "image_display",  # Используем метод для отображения изображения
+        "image_display",
         "text",
         "cooking_time",
         "count_in_favorite",
+        "tags_list",  # Добавляем метод для отображения тегов
     )
     list_filter = (
         "tags",
@@ -212,11 +215,23 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description="Изображение")
     def image_display(self, obj):
         if obj.image:
-            return format_html(
-                '<img src="{}" width="100" height="100" style="object-fit: cover;" />',
-                obj.image.url,
+            img_tag = (
+                '<a href="{}" target="_blank">'
+                '<img src="{}" width="100" height="100" '
+                'style="object-fit: cover;" />'
+                '</a>'
             )
+            return format_html(img_tag, obj.image.url, obj.image.url)
         return "-"
+
+    @admin.display(description="Теги")
+    def tags_list(self, obj):
+        tags = obj.tags.all()
+        return format_html_join(
+            '',
+            '<div style="margin-bottom: 4px;">{}</div>',
+            ((tag.name,) for tag in tags)
+        )
 
 
 @admin.register(ShoppingCart)
