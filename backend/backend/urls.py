@@ -11,7 +11,6 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    # Добавляем маршруты для статики и медиа в режиме отладки
     urlpatterns += static(
         settings.STATIC_URL, document_root=settings.STATIC_ROOT
     )
