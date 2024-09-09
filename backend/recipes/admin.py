@@ -3,9 +3,20 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.db.models import Count
 from django.utils.html import format_html
+from django.utils.translation import gettext_lazy as _
 from rest_framework.authtoken.models import TokenProxy
 
-from .models import Subscription, User, Recipe
+from .models import (
+    Favorite,
+    Ingredient,
+    MinValue,
+    Recipe,
+    RecipeIngredient,
+    ShoppingCart,
+    Subscription,
+    Tag,
+    User,
+)
 
 admin.site.unregister(Group)
 admin.site.unregister(TokenProxy)
@@ -88,11 +99,11 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ("username", "email", "first_name", "last_name")
     ordering = ("id",)
 
-    # Переопределяем метод get_queryset для добавления аннотаций
     def get_queryset(self, request):
         return (
             super()
             .get_queryset(request)
+            .prefetch_related("authors", "subscribers", "recipes")
             .annotate(
                 subscribers_count=Count("authors", distinct=True),
                 subscriptions_count=Count("subscribers", distinct=True),
@@ -100,7 +111,6 @@ class UserAdmin(BaseUserAdmin):
             )
         )
 
-    # Используем аннотированные значения
     def subscribers_count(self, obj):
         return obj.subscribers_count
 
@@ -132,3 +142,60 @@ class UserAdmin(BaseUserAdmin):
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ("subscriber", "author")
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug")
+
+
+@admin.register(Ingredient)
+class IngredientAdmin(admin.ModelAdmin):
+    list_display = ("name", "measurement_unit", "recipes_count")
+    list_filter = ("measurement_unit",)
+    search_fields = ("name",)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            recipes_count=Count("recipeingredients__recipe", distinct=True)
+        )
+
+    @admin.display(description="Число рецептов")
+    def recipes_count(self, obj):
+        return obj.recipes_count
+
+
+class RecipeIngredientInLine(admin.TabularInline):
+    model = RecipeIngredient
+    min_num = MinValue.AMOUNT
+
+
+@admin.register(Recipe)
+class RecipeAdmin(admin.ModelAdmin):
+    readonly_fields = ("count_in_favorite",)
+    list_display = (
+        "name",
+        "author",
+        "image",
+        "text",
+        "cooking_time",
+        "count_in_favorite",
+    )
+    list_filter = ("tags", "author", "name")
+
+    @admin.display(description="Счетчик в избранном")
+    def count_in_favorite(self, recipe):
+        return recipe.favorites.count()
+
+
+@admin.register(ShoppingCart)
+class ShoppingCartAdmin(admin.ModelAdmin):
+    list_display = ("user", "recipe")
+    list_filter = list_display
+
+
+@admin.register(Favorite)
+class FavoriteRecipeAdmin(admin.ModelAdmin):
+    list_display = ("user", "recipe")
+    list_filter = list_display
