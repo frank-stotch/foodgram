@@ -3,7 +3,6 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.db.models import Count
 from django.utils.html import format_html
-from django.utils.translation import gettext_lazy as _
 from rest_framework.authtoken.models import TokenProxy
 
 from .models import (
@@ -90,7 +89,8 @@ class UserAdmin(BaseUserAdmin):
         "first_name",
         "last_name",
         "avatar_display",
-    ) + readonly_fields
+        *readonly_fields,
+    )
     list_filter = (
         HasRecipesFilter,
         HasSubscriptionsFilter,
@@ -131,7 +131,7 @@ class UserAdmin(BaseUserAdmin):
         if obj.avatar:
             return format_html(
                 (
-                    '<img src="{}" width="50" height="50" '
+                    '<img src="{}" width="100" height="100" '
                     'style="object-fit: cover;" />'
                 ),
                 obj.avatar.url,
@@ -146,12 +146,22 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug")
+    list_display = ("id", "name", "slug", "recipes_count")
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            recipes_count=Count("recipes__tags", distinct=True)
+        )
+
+    @admin.display(description="Число рецептов")
+    def recipes_count(self, obj):
+        return obj.recipes_count
 
 
 @admin.register(Ingredient)
 class IngredientAdmin(admin.ModelAdmin):
-    list_display = ("name", "measurement_unit", "recipes_count")
+    list_display = ("id", "name", "measurement_unit", "recipes_count")
     list_filter = ("measurement_unit",)
     search_fields = ("name",)
 
@@ -177,16 +187,36 @@ class RecipeAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "author",
-        "image",
+        "image_display",  # Используем метод для отображения изображения
         "text",
         "cooking_time",
         "count_in_favorite",
     )
-    list_filter = ("tags", "author", "name")
+    list_filter = (
+        "tags",
+        "author",
+        "cooking_time",
+    )
+    search_fields = ("name",)
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            count_in_favorite=Count("favorites", distinct=True)
+        )
 
     @admin.display(description="Счетчик в избранном")
     def count_in_favorite(self, recipe):
-        return recipe.favorites.count()
+        return recipe.count_in_favorite
+
+    @admin.display(description="Изображение")
+    def image_display(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" width="100" height="100" style="object-fit: cover;" />',
+                obj.image.url,
+            )
+        return "-"
 
 
 @admin.register(ShoppingCart)
