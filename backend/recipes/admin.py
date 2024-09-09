@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
+from django.db.models import Count
 from django.utils.html import format_html
 from rest_framework.authtoken.models import TokenProxy
 
@@ -87,18 +88,31 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ("username", "email", "first_name", "last_name")
     ordering = ("id",)
 
+    # Переопределяем метод get_queryset для добавления аннотаций
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .annotate(
+                subscribers_count=Count("authors", distinct=True),
+                subscriptions_count=Count("subscribers", distinct=True),
+                recipes_count=Count("recipes", distinct=True),
+            )
+        )
+
+    # Используем аннотированные значения
     def subscribers_count(self, obj):
-        return Subscription.objects.filter(author=obj).count()
+        return obj.subscribers_count
 
     subscribers_count.short_description = "Количество подписчиков"
 
     def subscriptions_count(self, obj):
-        return Subscription.objects.filter(subscriber=obj).count()
+        return obj.subscriptions_count
 
     subscriptions_count.short_description = "Количество подписок"
 
     def recipes_count(self, obj):
-        return Recipe.objects.filter(author=obj).count()
+        return obj.recipes_count
 
     recipes_count.short_description = "Количество рецептов"
 
@@ -106,7 +120,10 @@ class UserAdmin(BaseUserAdmin):
     def avatar_display(self, obj):
         if obj.avatar:
             return format_html(
-                '<img src="{}" width="50" height="50" style="object-fit: cover;" />',
+                (
+                    '<img src="{}" width="50" height="50" '
+                    'style="object-fit: cover;" />'
+                ),
                 obj.avatar.url,
             )
         return "-"
