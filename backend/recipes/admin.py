@@ -195,10 +195,17 @@ class RecipeAdmin(admin.ModelAdmin):
         "ingredients_list",
     )
     list_filter = ("tags",)
+    search_fields = ("name", "tags__name", "ingredients__name")
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            count_in_favorite=Count("favorites", distinct=True)
+        )
 
     @admin.display(description="Счетчик в избранном")
     def count_in_favorite(self, recipe):
-        return recipe.favorites.count()
+        return recipe.count_in_favorite
 
     @admin.display(description='Изображение')
     def image_display(self, obj):
@@ -245,6 +252,6 @@ class ShoppingCartAdmin(admin.ModelAdmin):
 
 
 @admin.register(Favorite)
-class FavoriteRecipeAdmin(admin.ModelAdmin):
+class FavoriteAdmin(admin.ModelAdmin):
     list_display = ("user", "recipe")
     list_filter = list_display
