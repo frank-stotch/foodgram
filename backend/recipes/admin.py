@@ -111,20 +111,17 @@ class UserAdmin(BaseUserAdmin):
             )
         )
 
+    @admin.display(description="Количество подписчиков")
     def subscribers_count(self, obj):
         return obj.subscribers_count
 
-    subscribers_count.short_description = "Количество подписчиков"
-
+    @admin.display(description="Количество подписок")
     def subscriptions_count(self, obj):
         return obj.subscriptions_count
 
-    subscriptions_count.short_description = "Количество подписок"
-
+    @admin.display(description="Количество рецептов")
     def recipes_count(self, obj):
         return obj.recipes_count
-
-    recipes_count.short_description = "Количество рецептов"
 
     @admin.display(description="Аватар")
     def avatar_display(self, obj):
@@ -197,7 +194,7 @@ class RecipeAdmin(admin.ModelAdmin):
         "tags_list",
         "ingredients_list",
     )
-    list_filter = ("tags", "author", "name")
+    list_filter = ("tags",)
 
     @admin.display(description="Счетчик в избранном")
     def count_in_favorite(self, recipe):
