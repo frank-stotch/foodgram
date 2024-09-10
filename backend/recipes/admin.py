@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
@@ -8,9 +9,7 @@ from rest_framework.authtoken.models import TokenProxy
 from .models import (
     Favorite,
     Ingredient,
-    MinValue,
     Recipe,
-    RecipeIngredient,
     ShoppingCart,
     Subscription,
     Tag,
@@ -176,9 +175,29 @@ class IngredientAdmin(admin.ModelAdmin):
         return obj.recipes_count
 
 
-class RecipeIngredientInLine(admin.TabularInline):
-    model = RecipeIngredient
-    min_num = MinValue.AMOUNT
+class RecipeAuthorFilter(admin.SimpleListFilter):
+    title = "Автор"
+    parameter_name = "author"
+
+    def lookups(self, request, model_admin):
+        qs = model_admin.get_queryset(request).select_related("author")
+        if (
+            settings.DATABASES["default"]["ENGINE"]
+            == "django.db.backends.postgresql"
+        ):
+            authors = qs.values_list(
+                "author__id", "author__username"
+            ).distinct("author__id")
+        else:
+            authors = set(
+                (recipe.author.id, recipe.author.username) for recipe in qs
+            )
+        return [(author_id, username) for author_id, username in authors]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(author__id=self.value())
+        return queryset
 
 
 @admin.register(Recipe)
@@ -194,20 +213,36 @@ class RecipeAdmin(admin.ModelAdmin):
         "tags_list",
         "ingredients_list",
     )
-    list_filter = ("tags",)
+    list_filter = (
+        "tags",
+        RecipeAuthorFilter,
+    )
     search_fields = ("name", "tags__name", "ingredients__name")
 
     def get_queryset(self, request):
-        queryset = super().get_queryset(request)
-        return queryset.annotate(
-            count_in_favorite=Count("favorites", distinct=True)
+        queryset = (
+            super()
+            .get_queryset(request)
+            .select_related("author")
+            .prefetch_related(
+                "tags", "ingredients", "recipeingredients__ingredient"
+            )
         )
+
+        if (
+            settings.DATABASES["default"]["ENGINE"]
+            == "django.db.backends.postgresql"
+        ):
+            return queryset.annotate(
+                count_in_favorite=Count("favorites", distinct=True)
+            )
+        return queryset.annotate(count_in_favorite=Count("favorites"))
 
     @admin.display(description="Счетчик в избранном")
     def count_in_favorite(self, recipe):
         return recipe.count_in_favorite
 
-    @admin.display(description='Изображение')
+    @admin.display(description="Изображение")
     def image_display(self, obj):
         if obj.image:
             image_url = obj.image.url
@@ -215,9 +250,9 @@ class RecipeAdmin(admin.ModelAdmin):
                 '<a href="{}" target="_blank">'
                 '<img src="{}" width="100" height="100" '
                 'style="object-fit: cover;" />'
-                '</a>',
+                "</a>",
                 image_url,
-                image_url
+                image_url,
             )
         return "-"
 
@@ -239,9 +274,9 @@ class RecipeAdmin(admin.ModelAdmin):
     def tags_list(self, obj):
         tags = obj.tags.all()
         return format_html_join(
-            '',
+            "",
             '<div style="margin-bottom: 4px;">{}</div>',
-            ((tag.name,) for tag in tags)
+            ((tag.name,) for tag in tags),
         )
 
 
