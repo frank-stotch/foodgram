@@ -43,17 +43,17 @@ class UserViewSet(DjoserUserViewSet):
     )
     def avatar(self, request):
         user = request.user
-        if request.method == "PUT":
-            serializer = serializers.AvatarSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            user.avatar = serializer.validated_data["avatar"]
-            user.save()
-            return Response(
-                serializers.AvatarSerializer(user).data,
-                status=HTTPStatus.OK,
-            )
-        user.avatar.delete(save=True)
-        return Response(status=HTTPStatus.NO_CONTENT)
+        if request.method == "DELETE":
+            user.avatar.delete(save=True)
+            return Response(status=HTTPStatus.NO_CONTENT)
+        serializer = serializers.AvatarSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user.avatar = serializer.validated_data["avatar"]
+        user.save()
+        return Response(
+            serializers.AvatarSerializer(user).data,
+            status=HTTPStatus.OK,
+        )
 
     @action(
         detail=False,
