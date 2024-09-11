@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from django.http import FileResponse 
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -172,7 +173,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .values_list("recipe__name", flat=True)
             .distinct()
         )
-        return utils.make_shopping_cart_file(shopping_cart, unique_recipes)
+        return FileResponse(
+            utils.make_shopping_cart_file(shopping_cart, unique_recipes),
+            as_attachment=True,
+            filename="shopping_cart.txt",
+        )
 
     @staticmethod
     def _favorite_shopping_cart_logic(
