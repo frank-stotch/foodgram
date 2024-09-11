@@ -104,21 +104,18 @@ class ReadRecipeSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    @staticmethod
-    def _get_favorited_shopping_cart_logic(model, user, recipe):
+    def get_is_in_shopping_cart(self, recipe):
+        user = self.context.get("request").user
         return (
             user.is_authenticated
-            and model.objects.filter(recipe=recipe, user=user).exists()
-        )
-
-    def get_is_in_shopping_cart(self, recipe):
-        return self._get_favorited_shopping_cart_logic(
-            ShoppingCart, self.context["request"].user, recipe
+            and ShoppingCart.objects.filter(user=user, recipe=recipe).exists()
         )
 
     def get_is_favorited(self, recipe):
-        return self._get_favorited_shopping_cart_logic(
-            Favorite, self.context["request"].user, recipe
+        user = self.context.get("request").user
+        return (
+            user.is_authenticated
+            and Favorite.objects.filter(user=user, recipe=recipe).exists()
         )
 
 
@@ -159,9 +156,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
                 uniques.add(item)
         if duplicates:
             duplicates = ", ".join(map(str, duplicates))
-            raise serializers.ValidationError(
-                error_message.format(duplicates)
-            )
+            raise serializers.ValidationError(error_message.format(duplicates))
 
     def validate_tags(self, tags):
         self._check_duplicates([tag.id for tag in tags], Error.DUPLICATE_TAGS)
