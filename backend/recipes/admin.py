@@ -186,7 +186,7 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     list_filter = (
         "tags",
-        "author",
+        ("author", admin.RelatedOnlyFieldListFilter),
     )
     search_fields = ("name", "tags__name", "ingredients__name")
 
