@@ -70,8 +70,7 @@ class Error:
     NOT_FAVORITED = "Рецепта нет в избранном"
     ALREADY_SUBSCRIBED = "Вы уже подписаны на этого автора"
     CANNOT_SUBSCRIBE_TO_YOURSELF = "Нельзя подписаться на самого себя"
-    DUPLICATE_INGREDIENTS = "ID повторяющихся продуктов: {}"
-    DUPLICATE_TAGS = "ID повторяющихся тегов: {}"
+    DUPLICATES = "Дубликаты: {}"
     NO_IMAGE = "Поле 'image' не может быть пустым"
     NOT_SUBSCRIBED = "Вы не подписаны на этого автора"
 
