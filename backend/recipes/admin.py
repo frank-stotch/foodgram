@@ -30,12 +30,13 @@ class HasRecipesFilter(admin.SimpleListFilter):
             ("no", "Нет"),
         )
 
-    def queryset(self, request, queryset):
+    def queryset(self, request, user_queryset):
+        user_queryset = user_queryset.annotate(recipe_count=Count('recipes'))
         if self.value() == "yes":
-            return queryset.filter(recipes__isnull=False).distinct()
+            return user_queryset.filter(recipe_count__gt=0)
         if self.value() == "no":
-            return queryset.filter(recipes__isnull=True)
-        return queryset
+            return user_queryset.filter(recipe_count=0)
+        return user_queryset
 
 
 class HasSubscriptionsFilter(admin.SimpleListFilter):
@@ -66,12 +67,12 @@ class HasSubscribersFilter(admin.SimpleListFilter):
             ("no", "Нет"),
         )
 
-    def queryset(self, request, queryset):
+    def queryset(self, request, user_queryset):
         if self.value() == "yes":
-            return queryset.filter(authors__isnull=False).distinct()
+            return user_queryset.filter(authors__isnull=False).distinct()
         if self.value() == "no":
-            return queryset.filter(authors__isnull=True)
-        return queryset
+            return user_queryset.filter(authors__isnull=True)
+        return user_queryset
 
 
 @admin.register(User)
