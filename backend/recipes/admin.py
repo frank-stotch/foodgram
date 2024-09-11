@@ -110,15 +110,15 @@ class UserAdmin(BaseUserAdmin):
             )
         )
 
-    @admin.display(description="Количество подписчиков")
+    @admin.display(description="Подписчики")
     def subscribers_count(self, obj):
         return obj.subscribers_count
 
-    @admin.display(description="Количество подписок")
+    @admin.display(description="Подписки")
     def subscriptions_count(self, obj):
         return obj.subscriptions_count
 
-    @admin.display(description="Количество рецептов")
+    @admin.display(description="Рецепты")
     def recipes_count(self, obj):
         return obj.recipes_count
 
@@ -153,7 +153,7 @@ class TagAdmin(admin.ModelAdmin):
             recipes_count=Count("recipes__tags", distinct=True)
         )
 
-    @admin.display(description="Число рецептов")
+    @admin.display(description="Рецепты")
     def recipes_count(self, obj):
         return obj.recipes_count
 
@@ -170,7 +170,7 @@ class IngredientAdmin(admin.ModelAdmin):
             recipes_count=Count("recipeingredients__recipe", distinct=True)
         )
 
-    @admin.display(description="Число рецептов")
+    @admin.display(description="Рецепты")
     def recipes_count(self, obj):
         return obj.recipes_count
 
@@ -238,7 +238,7 @@ class RecipeAdmin(admin.ModelAdmin):
             )
         return queryset.annotate(count_in_favorite=Count("favorites"))
 
-    @admin.display(description="Счетчик в избранном")
+    @admin.display(description="В избранном")
     def count_in_favorite(self, recipe):
         return recipe.count_in_favorite
 
