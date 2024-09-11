@@ -11,7 +11,7 @@
 
 ### Основные используемые технологии
 
-* Python 3.9.19,
-* Django 3.2.25,
-* DjangoRestFramework 3.13.1,
+* Python 3.9,
+* Django 3.2,
+* DjangoRestFramework 3.13,
 
