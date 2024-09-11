@@ -226,7 +226,7 @@ class Recipe(models.Model):
         return self.name
 
     def get_absolute_url(self):
-        return reverse("short_link", args=[str(self.pk)])
+        return reverse("recipes:short_link", args=[str(self.pk)])
 
 
 class RecipeIngredient(models.Model):
