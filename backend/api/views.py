@@ -8,6 +8,7 @@ from django.http import FileResponse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
 from rest_framework.response import Response
 
@@ -79,30 +80,26 @@ class UserViewSet(DjoserUserViewSet):
     def subscribe(self, request, id):
         subscriber = request.user
         author = get_object_or_404(User, pk=id)
-        if request.method == "POST":
-            if author == subscriber:
-                return Response(
-                    dict(errors=Error.CANNOT_SUBSCRIBE_TO_YOURSELF),
-                    status=HTTPStatus.BAD_REQUEST,
-                )
-            if Subscription.objects.filter(
-                author=author, subscriber=subscriber
-            ).exists():
-                return Response(
-                    dict(errors=Error.ALREADY_SUBSCRIBED),
-                    status=HTTPStatus.BAD_REQUEST,
-                )
-            Subscription.objects.create(author=author, subscriber=subscriber)
+        if request.method == "DELETE":
+            get_object_or_404(
+                Subscription, author=author, subscriber=subscriber
+            ).delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        if subscriber == author:
+            raise ValidationError(
+                dict(error=Error.CANNOT_SUBSCRIBE_TO_YOURSELF)
+            )
+        item, created = Subscription.objects.get_or_create(
+            author=author, subscriber=subscriber
+        )
+        if created:
             return Response(
                 serializers.ReadSubscriptionSerializer(
                     author, context={"request": request}
                 ).data,
                 status=HTTPStatus.CREATED,
             )
-        get_object_or_404(
-            Subscription, author=author, subscriber=subscriber
-        ).delete()
-        return Response(status=HTTPStatus.NO_CONTENT)
+        raise ValidationError(dict(error=Error.ALREADY_SUBSCRIBED))
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -189,21 +186,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
         model,
     ):
         recipe = get_object_or_404(Recipe, pk=pk)
-        if request.method == "POST":
-            item, created = model.objects.get_or_create(
-                user=request.user, recipe=recipe
-            )
-            if created:
-                return Response(
-                    serializers.ShortRecipeSerializer(recipe).data,
-                    status=HTTPStatus.CREATED,
-                )
+        if request.method == "DELETE":
+            get_object_or_404(model, recipe=recipe, user=request.user).delete()
+            return Response(status=HTTPStatus.NO_CONTENT)
+        item, created = model.objects.get_or_create(
+            user=request.user, recipe=recipe
+        )
+        if created:
             return Response(
-                dict(error=error_message_add),
-                status=HTTPStatus.BAD_REQUEST,
+                serializers.ShortRecipeSerializer(recipe).data,
+                status=HTTPStatus.CREATED,
             )
-        get_object_or_404(model, recipe=recipe, user=request.user).delete()
-        return Response(status=HTTPStatus.NO_CONTENT)
+        raise ValidationError(dict(error=error_message_add))
 
     @action(detail=True, methods=("POST", "DELETE"))
     def favorite(self, request, pk):
