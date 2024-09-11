@@ -1,9 +1,8 @@
-from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.db.models import Count
-from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 from rest_framework.authtoken.models import TokenProxy
 
 from .models import (
@@ -123,17 +122,14 @@ class UserAdmin(BaseUserAdmin):
         return obj.recipes_count
 
     @admin.display(description="Аватар")
-    def avatar_display(self, obj):
-        if obj.avatar:
-            return format_html(
-                (
-                    '<a href="{}" target="_blank">'
-                    '<img src="{}" width="100" height="100" '
-                    'style="object-fit: cover;" />'
-                    "</a>"
-                ),
-                obj.avatar.url,
-                obj.avatar.url,
+    @mark_safe
+    def avatar_display(self, user):
+        if user.avatar:
+            return (
+                f'<a href="{user.avatar.url}" target="_blank">'
+                f'<img src="{user.avatar.url}" width="100" height="100" '
+                'style="object-fit: cover;" />'
+                "</a>"
             )
         return "-"
 
@@ -175,31 +171,6 @@ class IngredientAdmin(admin.ModelAdmin):
         return obj.recipes_count
 
 
-class RecipeAuthorFilter(admin.SimpleListFilter):
-    title = "Автор"
-    parameter_name = "author"
-
-    def lookups(self, request, model_admin):
-        qs = model_admin.get_queryset(request).select_related("author")
-        if (
-            settings.DATABASES["default"]["ENGINE"]
-            == "django.db.backends.postgresql"
-        ):
-            authors = qs.values_list(
-                "author__id", "author__username"
-            ).distinct("author__id")
-        else:
-            authors = set(
-                (recipe.author.id, recipe.author.username) for recipe in qs
-            )
-        return [(author_id, username) for author_id, username in authors]
-
-    def queryset(self, request, queryset):
-        if self.value():
-            return queryset.filter(author__id=self.value())
-        return queryset
-
-
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
     readonly_fields = ("count_in_favorite",)
@@ -215,69 +186,57 @@ class RecipeAdmin(admin.ModelAdmin):
     )
     list_filter = (
         "tags",
-        RecipeAuthorFilter,
+        "author",
     )
     search_fields = ("name", "tags__name", "ingredients__name")
 
     def get_queryset(self, request):
-        queryset = (
+        return (
             super()
             .get_queryset(request)
             .select_related("author")
             .prefetch_related(
                 "tags", "ingredients", "recipeingredients__ingredient"
             )
+            .annotate(count_in_favorite=Count("favorites"))
         )
-
-        if (
-            settings.DATABASES["default"]["ENGINE"]
-            == "django.db.backends.postgresql"
-        ):
-            return queryset.annotate(
-                count_in_favorite=Count("favorites", distinct=True)
-            )
-        return queryset.annotate(count_in_favorite=Count("favorites"))
 
     @admin.display(description="В избранном")
     def count_in_favorite(self, recipe):
         return recipe.count_in_favorite
 
     @admin.display(description="Изображение")
-    def image_display(self, obj):
-        if obj.image:
-            image_url = obj.image.url
-            return format_html(
-                '<a href="{}" target="_blank">'
-                '<img src="{}" width="100" height="100" '
+    @mark_safe
+    def image_display(self, recipe):
+        if recipe.image:
+            return (
+                f'<a href="{recipe.image.url}" target="_blank">'
+                f'<img src="{recipe.image.url}" width="100" height="100" '
                 'style="object-fit: cover;" />'
-                "</a>",
-                image_url,
-                image_url,
+                "</a>"
             )
         return "-"
 
     @admin.display(description="Ингредиенты")
-    def ingredients_list(self, obj):
-        ingredient_lines = [
-            (
+    @mark_safe
+    def ingredients_list(self, recipe):
+        return "<br>".join(
+            [
                 f"{recipe_ingredient.ingredient.name} - "
                 f"{recipe_ingredient.amount} "
                 f"{recipe_ingredient.ingredient.measurement_unit}"
-            )
-            for recipe_ingredient in obj.recipeingredients.select_related(
-                "ingredient"
-            )
-        ]
-        return format_html("<br>".join(ingredient_lines))
+                for recipe_ingredient
+                in recipe.recipeingredients.select_related(
+                    "ingredient"
+                )
+            ]
+        )
 
     @admin.display(description="Теги")
-    def tags_list(self, obj):
-        tags = obj.tags.all()
-        return format_html_join(
-            "",
-            '<div style="margin-bottom: 4px;">{}</div>',
-            ((tag.name,) for tag in tags),
-        )
+    @mark_safe
+    def tags_list(self, recipe):
+        tags = recipe.tags.all()
+        return "<br>".join([tag.name for tag in tags])
 
 
 @admin.register(ShoppingCart)
