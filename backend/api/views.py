@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse 
+from django.http import FileResponse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -161,6 +161,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             RecipeIngredient.objects.filter(
                 recipe__shoppingcarts__user=request.user
             )
+            .select_related("recipe", "ingredient")
             .values(
                 "ingredient__name",
                 "ingredient__measurement_unit",
@@ -169,7 +170,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .order_by("ingredient__name")
         )
         unique_recipes = (
-            ShoppingCart.objects.filter(user=request.user)
+            ShoppingCart.objects.select_related("recipe", "user")
+            .filter(user=request.user)
             .values_list("recipe__name", flat=True)
             .distinct()
         )
