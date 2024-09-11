@@ -49,12 +49,15 @@ class HasSubscriptionsFilter(admin.SimpleListFilter):
             ("no", "Нет"),
         )
 
-    def queryset(self, request, queryset):
+    def queryset(self, request, user_queryset):
+        user_queryset = user_queryset.annotate(
+            subscription_count=Count("subscribers", distinct=True)
+        )
         if self.value() == "yes":
-            return queryset.filter(subscribers__isnull=False).distinct()
+            return user_queryset.filter(subscription_count__gt=0)
         if self.value() == "no":
-            return queryset.filter(subscribers__isnull=True)
-        return queryset
+            return user_queryset.filter(subscription_count=0)
+        return user_queryset
 
 
 class HasSubscribersFilter(admin.SimpleListFilter):
@@ -68,10 +71,13 @@ class HasSubscribersFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, user_queryset):
+        user_queryset = user_queryset.annotate(
+            subscriber_count=Count("authors", distinct=True)
+        )
         if self.value() == "yes":
-            return user_queryset.filter(authors__isnull=False).distinct()
+            return user_queryset.filter(subscriber_count__gt=0)
         if self.value() == "no":
-            return user_queryset.filter(authors__isnull=True)
+            return user_queryset.filter(subscriber_count=0)
         return user_queryset
 
 
