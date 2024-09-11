@@ -19,10 +19,10 @@ def make_shopping_cart_file(shopping_cart, recipes):
     return "\n".join(
         [
             f"Дата и время: {current_time}",
-            "/n",
+            "",
             "Список покупок:",
             *ingredients,
-            "/n",
+            "",
             "Список рецептов:",
             *recipes,
         ],
