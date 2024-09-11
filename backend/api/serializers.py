@@ -1,3 +1,5 @@
+from collections import Counter
+
 from drf_extra_fields.fields import Base64ImageField
 from django.core.validators import MinValueValidator
 from django.db import transaction
@@ -146,26 +148,22 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         )
 
     @staticmethod
-    def _check_duplicates(array, error_message):
-        uniques = set()
-        duplicates = set()
-        for item in array:
-            if item in uniques:
-                duplicates.add(item)
-            else:
-                uniques.add(item)
+    def _check_duplicates(array, field_name):
+        counts = Counter(array)
+        duplicates = {item for item, count in counts.items() if count > 1}
         if duplicates:
-            duplicates = ", ".join(map(str, duplicates))
-            raise serializers.ValidationError(error_message.format(duplicates))
+            raise serializers.ValidationError(
+                {field_name: Error.DUPLICATES.format(duplicates)}
+            )
 
     def validate_tags(self, tags):
-        self._check_duplicates([tag.id for tag in tags], Error.DUPLICATE_TAGS)
+        self._check_duplicates([tag.id for tag in tags], "tags")
         return tags
 
     def validate_ingredients(self, ingredients):
         self._check_duplicates(
             [item["ingredient"].id for item in ingredients],
-            Error.DUPLICATE_INGREDIENTS,
+            "ingredients",
         )
         return ingredients
 
@@ -224,8 +222,14 @@ class ReadSubscriptionSerializer(UserSerializer):
         fields = (*UserSerializer.Meta.fields, "recipes", "recipes_count")
 
     def get_recipes(self, user):
-        request = self.context.get("request")
-        recipes_limit = int(request.GET.get("recipes_limit", 10**10))
         return ShortRecipeSerializer(
-            user.recipes.all()[:recipes_limit], context=self.context, many=True
+            user.recipes.all()[
+                : int(
+                    self.context.get("request").GET.get(
+                        "recipes_limit", 10**10
+                    )
+                )
+            ],
+            context=self.context,
+            many=True,
         ).data
