@@ -15,6 +15,7 @@ from .models import (
     User,
 )
 
+
 admin.site.unregister(Group)
 admin.site.unregister(TokenProxy)
 
