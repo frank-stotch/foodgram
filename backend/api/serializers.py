@@ -19,6 +19,7 @@ from recipes.models import (
     Tag,
 )
 
+
 User = get_user_model()
 
 

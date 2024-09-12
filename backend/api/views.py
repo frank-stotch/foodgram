@@ -12,7 +12,6 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import SAFE_METHODS, AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from . import filters, pagination, permissions, serializers, utils
 from recipes.models import (
     Error,
     Favorite,
@@ -23,6 +22,8 @@ from recipes.models import (
     Subscription,
     Tag,
 )
+
+from . import filters, pagination, permissions, serializers, utils
 
 
 User = get_user_model()
