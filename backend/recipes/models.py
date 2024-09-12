@@ -5,7 +5,6 @@ from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from django.urls import reverse
 
-
 from .validators import validate_username
 
 
