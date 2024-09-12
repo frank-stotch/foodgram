@@ -1,6 +1,6 @@
 # Foodgram
 
-[![Backend tests](https://github.com/frank-stotch/foodgram/actions/workflows/backend_tests.yml/badge.svg)](https://github.com/frank-stotch/foodgram/actions/workflows/backend_tests.yml)
+[![Backend tests](https://github.com/frank-stotch/foodgram/actions/workflows/backend_tests.yml/badge.svg)](https://github.com/frank-stotch/foodgram/actions/workflows/backend_tests.yml) [![Frontend tests](https://github.com/frank-stotch/foodgram/actions/workflows/frontend_tests.yml/badge.svg)](https://github.com/frank-stotch/foodgram/actions/workflows/frontend_tests.yml)
 
 Foodgram — это веб-приложение, где пользователи могут публиковать свои рецепты, добавлять чужие рецепты в избранное и подписываться на других авторов. Зарегистрированные пользователи также могут создавать «Список покупок», который поможет собрать все нужные продукты для приготовления выбранных блюд.
 
