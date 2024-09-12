@@ -1,10 +1,10 @@
 from collections import Counter
 
-from drf_extra_fields.fields import Base64ImageField
+from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import transaction
 from djoser.serializers import UserSerializer as DjoserUserSerializer
-from django.contrib.auth import get_user_model
+from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 
 from recipes.models import (
@@ -18,7 +18,6 @@ from recipes.models import (
     Subscription,
     Tag,
 )
-
 
 User = get_user_model()
 

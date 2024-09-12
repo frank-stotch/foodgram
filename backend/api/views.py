@@ -2,14 +2,14 @@ from http import HTTPStatus
 
 from django.contrib.auth import get_user_model
 from django.db.models import Sum
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from django.http import FileResponse
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from . import filters, pagination, permissions, serializers, utils
@@ -19,8 +19,8 @@ from recipes.models import (
     Ingredient,
     Recipe,
     RecipeIngredient,
-    Subscription,
     ShoppingCart,
+    Subscription,
     Tag,
 )
 

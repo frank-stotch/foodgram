@@ -5,7 +5,6 @@ from django_filters.rest_framework.filters import (
 )
 from rest_framework.filters import SearchFilter
 
-
 from recipes.models import Recipe, Tag
 
 
