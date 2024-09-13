@@ -36,7 +36,7 @@ jobs:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           disable_web_page_preview: true
-          format: html
+          format: markdown
           message: |
             Не удалось собрать и запушить образ для <b>GATEWAY</b> в репозитории: [${{ github.repository }}](https://github.com/${{ github.repository }})
             Детали:

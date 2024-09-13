@@ -8,8 +8,8 @@ on:
       - completed
 
 jobs:
-  build_and_push_to_docker_hub:
-    name: Push Docker image to DockerHub
+  build_frontend_and_push_to_docker_hub:
+    name: Push frontend Docker image to DockerHub
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -25,20 +25,19 @@ jobs:
       - name: Push to DockerHub
         uses: docker/build-push-action@v4
         with:
-          context: ./backend/
+          context: ./frontend/
           push: true
-          tags: ${{ vars.DOCKER_PROFILE }}/${{ vars.PROJECT_NAME }}_backend:latest
-      - name: Send message if build and push for backend failed
+          tags: ${{ vars.DOCKER_PROFILE }}/${{ vars.PROJECT_NAME }}_frontend:latest
+      - name: Send message if build and push for frontend failed
         if: ${{ failure() }}
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           disable_web_page_preview: true
-
-          format: html
+          format: markdown
           message: |
-            Не удалось собрать и запушить образ для <b>BACKEND</b> в репозитории [${{ github.repository }}](https://github.com/${{ github.repository }})
+            Не удалось собрать и запушить образ для <b>FRONTEND</b> в репозитории: [${{ github.repository }}](https://github.com/${{ github.repository }})
             Детали:
             1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
