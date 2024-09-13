@@ -30,7 +30,7 @@ jobs:
           disable_web_page_preview: true
           format: markdown
           message: |
-            Не пройдены тесты для FRONTEND в репозитории [${{ github.repository }}](https://github.com/${{ github.repository }}) для интерпретатора Python: ${{ matrix.python }}
+            Не пройдены тесты для FRONTEND в репозитории [${{ github.repository }}](https://github.com/${{ github.repository }})
             Детали:
             1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
             2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
