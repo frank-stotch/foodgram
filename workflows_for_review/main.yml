@@ -1,0 +1,262 @@
+name: CI/CD
+
+on:
+  push:
+
+jobs:
+  tests:
+    strategy:
+      matrix:
+        python: ["3.8", "3.9", "3.10"]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13.10
+        env:
+          POSTGRES_USER: django_user
+          POSTGRES_PASSWORD: django_password
+          POSTGRES_DB: django_db
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip 
+          pip install flake8==6.0.0 flake8-isort==6.0.0
+          pip install -r ./backend/requirements.txt 
+      - name: Test with flake8 and django tests
+        env:
+          POSTGRES_USER: django_user  
+          POSTGRES_PASSWORD: django_password
+          POSTGRES_DB: django_db
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+        run: |
+          python -m flake8 backend/
+          cd backend/
+          python manage.py test
+      - name: Send message if test preparation failed
+        if: ${{ failure() }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          disable_web_page_preview: true
+          format: markdown
+          message: |
+            Не пройдены тесты для BACKEND в репозитории [${{ github.repository }}](https://github.com/${{ github.repository }}) для интерпретатора Python ${{ matrix.python }}
+            Детали:
+            1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
+            3. Сообщение коммита: ${{ github.event.commits[0].message }}
+            4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+
+  build_and_push_to_docker_hub:
+    name: Push Docker image to DockerHub
+    runs-on: ubuntu-latest
+    needs: tests
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker 
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend/
+          push: true
+          tags: ${{ vars.DOCKER_PROFILE }}/${{ vars.PROJECT_NAME }}_backend:latest
+      - name: Send message if build and push for backend failed
+        if: ${{ failure() }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          disable_web_page_preview: true
+
+          format: html
+          message: |
+            Не удалось собрать и запушить образ для <b>BACKEND</b> в репозитории [${{ github.repository }}](https://github.com/${{ github.repository }})
+            Детали:
+            1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
+            3. Сообщение коммита: ${{ github.event.commits[0].message }}
+            4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+  
+  build_frontend_and_push_to_docker_hub:
+    name: Push frontend Docker image to DockerHub
+    runs-on: ubuntu-latest
+    needs: tests
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker 
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend/
+          push: true
+          tags: ${{ vars.DOCKER_PROFILE }}/${{ vars.PROJECT_NAME }}_frontend:latest
+      - name: Send message if build and push for frontend failed
+        if: ${{ failure() }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          disable_web_page_preview: true
+          format: markdown
+          message: |
+            Не удалось собрать и запушить образ для <b>FRONTEND</b> в репозитории: [${{ github.repository }}](https://github.com/${{ github.repository }})
+            Детали:
+            1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
+            3. Сообщение коммита: ${{ github.event.commits[0].message }}
+            4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+  
+  build_gateway_and_push_to_docker_hub:
+    name: Push gateway Docker image to DockerHub
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker 
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./nginx/
+          push: true
+          tags: ${{ vars.DOCKER_PROFILE }}/${{ vars.PROJECT_NAME }}_gateway:latest
+      - name: Send message if build and push for gateway failed
+        if: ${{ failure() }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          disable_web_page_preview: true
+          format: markdown
+          message: |
+            Не удалось собрать и запушить образ для <b>GATEWAY</b> в репозитории: [${{ github.repository }}](https://github.com/${{ github.repository }})
+            Детали:
+            1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
+            3. Сообщение коммита: ${{ github.event.commits[0].message }}
+            4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+  
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: 
+      - build_and_push_to_docker_hub
+      - build_frontend_and_push_to_docker_hub
+      - build_gateway_and_push_to_docker_hub
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Make .env file via create-envfile by SpicyPizza
+        uses: SpicyPizza/create-envfile@v2.0.3
+        with:
+          envkey_DEBUG: ${{ vars.DEBUG }}
+          envkey_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          envkey_ALLOWED_HOSTS: ${{ vars.ALLOWED_HOSTS }}
+          envkey_LANGUAGE_CODE: ${{ vars.LANGUAGE_CODE }}
+          envkey_TIMEZONE: ${{ vars.TIME_ZONE }}
+          envkey_USE_SQLITE: ${{ vars.USE_SQLITE }}
+          envkey_POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          envkey_POSTGRES_DB_HOST: ${{ secrets.POSTGRES_DB_HOST }}
+          envkey_POSTGRES_DB_PORT: ${{ secrets.POSTGRES_DB_PORT }}
+          envkey_POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          envkey_POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          fail_on_empty: true
+          sort_keys: false
+      - name: Copy .env via ssh's scp
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: ".env"
+          target: "${{ vars.PROJECT_NAME }}"
+      - name: Copy docker-compose.yml via ssh
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "docker-compose.production.yml"
+          target: "${{ vars.PROJECT_NAME }}"
+      - name: Executing remote ssh commands to deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            cd ${{ vars.PROJECT_NAME }}
+            sudo docker compose -f docker-compose.production.yml pull
+            sudo docker compose -f docker-compose.production.yml down
+            sudo docker compose -f docker-compose.production.yml up -d
+            sudo docker compose -f docker-compose.production.yml exec backend python manage.py migrate
+            sudo docker compose -f docker-compose.production.yml exec backend python manage.py collectstatic
+            sudo docker compose -f docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+      - name: Send message if build and push for gateway failed
+        if: ${{ failure() }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          disable_web_page_preview: true
+          format: markdown
+          message: |
+            Не удалось задеплоить оркестр контейнеров в репозитории: [${{ github.repository }}](https://github.com/${{ github.repository }})
+            Детали:
+            1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
+            3. Сообщение коммита: ${{ github.event.commits[0].message }}
+            4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+  
+  send_success_message:
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Send message
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
+          message: | 
+            Деплой успешно выполнен в репозитории: [${{ github.repository }}](https://github.com/${{ github.repository }})
+            Детали:
+            1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
+            3. Сообщение коммита: ${{ github.event.commits[0].message }}
+            4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
