@@ -141,3 +141,4 @@ dmypy.json
 static/
 media/
 plan
+docker-compose.yml
