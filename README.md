@@ -1,6 +1,6 @@
 # Foodgram
 
-[![Backend tests](https://github.com/frank-stotch/foodgram/actions/workflows/backend_tests.yml/badge.svg)](https://github.com/frank-stotch/foodgram/actions/workflows/backend_tests.yml) 
+[![CI/CD](https://github.com/frank-stotch/foodgram/actions/workflows/main.yml/badge.svg)](https://github.com/frank-stotch/foodgram/actions/workflows/main.yml)
 
 Foodgram — это веб-приложение, где пользователи могут публиковать свои рецепты, добавлять чужие рецепты в избранное и подписываться на других авторов. Зарегистрированные пользователи также могут создавать «Список покупок», который поможет собрать все нужные продукты для приготовления выбранных блюд.
 
@@ -51,9 +51,8 @@ Foodgram — это веб-приложение, где пользователи
 - **Backend:**
   - **Django**: 3.2
   - **Django Rest Framework**: 3.13
-  - **PostgreSQL**: 13.1 (на продакшн-сервере)
-  - **SQLite**: 3.41 (на сервере разработки)
-  - **Docker** (опционально для развёртывания)
+  - **PostgreSQL**: 13.1
+  - **Docker**
 
 
 ## Конфигурация

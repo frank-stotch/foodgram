@@ -34,7 +34,7 @@ services:
         condition: service_started
 
   nginx:
-    image: frankstotch/foodgram_gateway:latest
+    image: nginx:1.19.3-alpine
     ports:
       - "10000:80"
     volumes:

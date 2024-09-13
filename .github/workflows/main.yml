@@ -132,42 +132,6 @@ jobs:
             3. Сообщение коммита: ${{ github.event.commits[0].message }}
             4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
   
-  build_gateway_and_push_to_docker_hub:
-    name: Push gateway Docker image to DockerHub
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Check out the repo
-        uses: actions/checkout@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      - name: Login to Docker 
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-      - name: Push to DockerHub
-        uses: docker/build-push-action@v4
-        with:
-          context: ./infra/
-          push: true
-          tags: ${{ vars.DOCKER_PROFILE }}/${{ vars.PROJECT_NAME }}_gateway:latest
-      - name: Send message if build and push for gateway failed
-        if: ${{ failure() }}
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          disable_web_page_preview: true
-          format: markdown
-          message: |
-            Не удалось собрать и запушить образ для <b>GATEWAY</b> в репозитории: [${{ github.repository }}](https://github.com/${{ github.repository }})
-            Детали:
-            1. [Ссылка на Workflow](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            2. Запушил: [${{ github.actor }}](https://github.com/${{ github.actor }})
-            3. Сообщение коммита: ${{ github.event.commits[0].message }}
-            4. [Ссылка на коммит](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-  
   deploy:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
@@ -178,6 +142,7 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+
       - name: Make .env file via create-envfile by SpicyPizza
         uses: SpicyPizza/create-envfile@v2.0.3
         with:
@@ -194,6 +159,7 @@ jobs:
           envkey_POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           fail_on_empty: true
           sort_keys: false
+
       - name: Copy .env via ssh's scp
         uses: appleboy/scp-action@master
         with:
@@ -203,6 +169,27 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: ".env"
           target: "${{ vars.PROJECT_NAME }}"
+
+      - name: Copy docs(Redock) via ssh
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "docs/"
+          target: "${{ vars.PROJECT_NAME }}"
+
+      - name: Copy nginx.conf via ssh
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          source: "infra/nginx.conf"
+          target: "${{ vars.PROJECT_NAME }}"
+          strip_components: 1
       - name: Copy docker-compose.yml via ssh
         uses: appleboy/scp-action@master
         with:
@@ -212,6 +199,7 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "docker-compose.production.yml"
           target: "${{ vars.PROJECT_NAME }}"
+          
       - name: Executing remote ssh commands to deploy
         uses: appleboy/ssh-action@master
         with:
