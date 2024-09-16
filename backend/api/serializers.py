@@ -200,7 +200,6 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         tags = validated_data.pop("tags", None)
         if not tags:
             raise serializers.ValidationError({"tags": Error.NO_TAGS})
-        recipe.tags.clear()
         recipe.ingredients.clear()
         self._save_ingredients(recipe, new_ingredients)
         return super().update(recipe, validated_data)
