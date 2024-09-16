@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
@@ -9,6 +10,7 @@ from .models import (
     Favorite,
     Ingredient,
     Recipe,
+    RecipeIngredient,
     ShoppingCart,
     Subscription,
     Tag,
@@ -168,12 +170,45 @@ class IngredientAdmin(admin.ModelAdmin):
         )
 
     @admin.display(description="Рецепты")
-    def recipes_count(self, obj):
-        return obj.recipes_count
+    def recipes_count(self, ingredient):
+        return ingredient.recipes_count
+
+
+class RecipeIngredientInLine(admin.TabularInline):
+    model = RecipeIngredient
+    min_num = 1
+
+
+class ImageWidget(forms.ClearableFileInput):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.attrs["class"] = "vTextField"
+
+    @mark_safe
+    def render(self, name, value, attrs=None, renderer=None):
+        html = super().render(name, value, attrs, renderer)
+        if value and hasattr(value, "url"):
+            html = (
+                "<div>"
+                f'<img src="{value.url}" width="200" height="200" /><br>'
+                f"{html}"
+                "</div>"
+            )
+        return html
+
+
+class RecipeForm(forms.ModelForm):
+    class Meta:
+        model = Recipe
+        fields = "__all__"
+        widgets = {
+            "image": ImageWidget,
+        }
 
 
 @admin.register(Recipe)
 class RecipeAdmin(admin.ModelAdmin):
+    form = RecipeForm
     readonly_fields = ("count_in_favorite",)
     list_display = (
         "name",
@@ -190,6 +225,7 @@ class RecipeAdmin(admin.ModelAdmin):
         ("author", admin.RelatedOnlyFieldListFilter),
     )
     search_fields = ("name", "tags__name", "ingredients__name")
+    inlines = (RecipeIngredientInLine,)
 
     def get_queryset(self, request):
         return (
@@ -209,14 +245,14 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description="Изображение")
     @mark_safe
     def image_display(self, recipe):
-        if recipe.image:
-            return (
-                f'<a href="{recipe.image.url}" target="_blank">'
-                f'<img src="{recipe.image.url}" width="100" height="100" '
-                'style="object-fit: cover;" />'
-                "</a>"
-            )
-        return "-"
+        if not recipe.image:
+            return "-"
+        return (
+            f'<a href="{recipe.image.url}" target="_blank">'
+            f'<img src="{recipe.image.url}" width="100" height="100" '
+            'style="object-fit: cover;" />'
+            "</a>"
+        )
 
     @admin.display(description="Ингредиенты")
     @mark_safe
@@ -226,8 +262,7 @@ class RecipeAdmin(admin.ModelAdmin):
                 f"{recipe_ingredient.ingredient.name} - "
                 f"{recipe_ingredient.amount} "
                 f"{recipe_ingredient.ingredient.measurement_unit}"
-                for recipe_ingredient
-                in recipe.recipeingredients.select_related(
+                for recipe_ingredient in recipe.recipeingredients.select_related(
                     "ingredient"
                 )
             ]
