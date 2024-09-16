@@ -134,11 +134,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return serializers.ReadRecipeSerializer
         return serializers.WriteRecipeSerializer
 
-    def get_serializer(self, *args, **kwargs):
-        if self.request.method == "PATCH":
-            kwargs["partial"] = False
-        return super().get_serializer(*args, **kwargs)
-
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 

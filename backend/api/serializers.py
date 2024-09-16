@@ -168,11 +168,8 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         return ingredients
 
     def validate_image(self, image):
-        request = self.context.get("request")
-        if request.method == "POST" and not image:
+        if not image:
             raise serializers.ValidationError(Error.NO_IMAGE)
-        if request.method == "PATCH" and not image:
-            return self.instance.image
         return image
 
     @staticmethod
@@ -195,7 +192,14 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, recipe, validated_data):
-        new_ingredients = validated_data.pop("ingredients")
+        new_ingredients = validated_data.pop("ingredients", None)
+        if not new_ingredients:
+            raise serializers.ValidationError(
+                {"ingredients": Error.NO_INGREDIENTS}
+            )
+        tags = validated_data.pop("tags", None)
+        if not tags:
+            raise serializers.ValidationError({"tags": Error.NO_TAGS})
         recipe.tags.clear()
         recipe.ingredients.clear()
         self._save_ingredients(recipe, new_ingredients)

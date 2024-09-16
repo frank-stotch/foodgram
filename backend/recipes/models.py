@@ -74,6 +74,8 @@ class Error:
     DUPLICATES = "Дубликаты: {}"
     NO_IMAGE = "Поле 'image' не может быть пустым"
     NOT_SUBSCRIBED = "Вы не подписаны на этого автора"
+    NO_TAGS = "Нужен хотя бы один тег"
+    NO_INGREDIENTS = "Рецепт не может обойтись без продуктов"
 
 
 class User(AbstractUser):
