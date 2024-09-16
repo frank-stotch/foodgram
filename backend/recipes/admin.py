@@ -2,7 +2,7 @@ from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils.safestring import mark_safe
 from rest_framework.authtoken.models import TokenProxy
 
@@ -33,11 +33,13 @@ class HasRecipesFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, user_queryset):
-        if self.value() == "yes":
-            return user_queryset.filter(recipes_count__gt=0)
-        if self.value() == "no":
-            return user_queryset.filter(recipes_count=0)
-        return user_queryset
+        if not self.value():
+            return user_queryset
+        return user_queryset.filter(
+            Q(recipes_count__gt=0)
+            if self.value() == "yes"
+            else Q(recipes_count=0)
+        )
 
 
 class HasSubscriptionsFilter(admin.SimpleListFilter):
@@ -51,11 +53,13 @@ class HasSubscriptionsFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, user_queryset):
-        if self.value() == "yes":
-            return user_queryset.filter(subscriptions_count__gt=0)
-        if self.value() == "no":
-            return user_queryset.filter(subscriptions_count=0)
-        return user_queryset
+        if not self.value():
+            return user_queryset
+        return user_queryset.filter(
+            Q(subscriptions_count__gt=0)
+            if self.value() == "yes"
+            else Q(subscriptions_count=0)
+        )
 
 
 class HasSubscribersFilter(admin.SimpleListFilter):
@@ -69,11 +73,13 @@ class HasSubscribersFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, user_queryset):
-        if self.value() == "yes":
-            return user_queryset.filter(subscribers_count__gt=0)
-        if self.value() == "no":
-            return user_queryset.filter(subscribers_count=0)
-        return user_queryset
+        if not self.value():
+            return user_queryset
+        return user_queryset.filter(
+            Q(subscribers_count__gt=0)
+            if self.value() == "yes"
+            else Q(subscribers_count=0)
+        )
 
 
 @admin.register(User)
