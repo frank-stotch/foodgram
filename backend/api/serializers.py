@@ -168,7 +168,7 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
         return ingredients
 
     def validate_image(self, image):
-        if not image:
+        if self.context.get("request").method == "POST" and not image:
             raise serializers.ValidationError(Error.NO_IMAGE)
         return image
 
