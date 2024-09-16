@@ -177,6 +177,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             utils.make_shopping_cart_file(shopping_cart, unique_recipes),
             as_attachment=True,
             filename="shopping_cart.txt",
+            content_type="text/plain",
         )
 
     @staticmethod
