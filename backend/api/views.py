@@ -93,14 +93,14 @@ class UserViewSet(DjoserUserViewSet):
         item, created = Subscription.objects.get_or_create(
             author=author, subscriber=subscriber
         )
-        if created:
-            return Response(
-                serializers.ReadSubscriptionSerializer(
-                    author, context={"request": request}
-                ).data,
-                status=HTTPStatus.CREATED,
-            )
-        raise ValidationError(dict(error=Error.ALREADY_SUBSCRIBED))
+        if not created:
+            raise ValidationError(dict(error=Error.ALREADY_SUBSCRIBED))
+        return Response(
+            serializers.ReadSubscriptionSerializer(
+                author, context={"request": request}
+            ).data,
+            status=HTTPStatus.CREATED,
+        )
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -168,10 +168,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .order_by("ingredient__name")
         )
         unique_recipes = (
-            ShoppingCart.objects.select_related("recipe", "user")
-            .filter(user=request.user)
-            .values_list("recipe__name", flat=True)
-            .distinct()
+            request.user.shoppingcarts.select_related("recipe").distinct()
         )
         return FileResponse(
             utils.make_shopping_cart_file(shopping_cart, unique_recipes),
@@ -194,12 +191,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         item, created = model.objects.get_or_create(
             user=request.user, recipe=recipe
         )
-        if created:
-            return Response(
-                serializers.ShortRecipeSerializer(recipe).data,
-                status=HTTPStatus.CREATED,
-            )
-        raise ValidationError(dict(error=error_message_add))
+        if not created:
+            raise ValidationError(dict(error=error_message_add))
+        return Response(
+            serializers.ShortRecipeSerializer(recipe).data,
+            status=HTTPStatus.CREATED,
+        )
 
     @action(detail=True, methods=("POST", "DELETE"))
     def favorite(self, request, pk):
