@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
 from django.db.models import Count, Q
+from django.urls import reverse
 from django.utils.safestring import mark_safe
 from rest_framework.authtoken.models import TokenProxy
 
@@ -127,8 +128,15 @@ class UserAdmin(BaseUserAdmin):
         return user.subscriptions_count
 
     @admin.display(description="Рецепты")
+    @mark_safe
     def recipes_count(self, user):
-        return user.recipes_count
+        if not user.recipes_count:
+            return user.recipes_count
+        url = reverse("admin:recipes_recipe_changelist")
+        return (
+            f'<a href="{url}?author__id__exact={user.id}">'
+            f'{user.recipes_count}</a>'
+        )
 
     @admin.display(description="Аватар")
     @mark_safe
@@ -157,8 +165,14 @@ class TagAdmin(admin.ModelAdmin):
         )
 
     @admin.display(description="Рецепты")
+    @mark_safe
     def recipes_count(self, tag):
-        return tag.recipes_count
+        if not tag.recipes_count:
+            return tag.recipes_count
+        url = reverse("admin:recipes_recipe_changelist")
+        return (
+            f'<a href="{url}?tags__id__exact={tag.id}">{tag.recipes_count}</a>'
+        )
 
 
 @admin.register(Ingredient)
