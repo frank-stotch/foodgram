@@ -119,28 +119,26 @@ class UserAdmin(BaseUserAdmin):
         )
 
     @admin.display(description="Подписчики")
-    def subscribers_count(self, obj):
-        return obj.subscribers_count
+    def subscribers_count(self, user):
+        return user.subscribers_count
 
     @admin.display(description="Подписки")
-    def subscriptions_count(self, obj):
-        return obj.subscriptions_count
+    def subscriptions_count(self, user):
+        return user.subscriptions_count
 
     @admin.display(description="Рецепты")
-    def recipes_count(self, obj):
-        return obj.recipes_count
+    def recipes_count(self, user):
+        return user.recipes_count
 
     @admin.display(description="Аватар")
     @mark_safe
     def avatar_display(self, user):
-        if user.avatar:
-            return (
-                f'<a href="{user.avatar.url}" target="_blank">'
-                f'<img src="{user.avatar.url}" width="100" height="100" '
-                'style="object-fit: cover;" />'
-                "</a>"
-            )
-        return "-"
+        if not user.avatar:
+            return "-"
+        return (
+            f'<img src="{user.avatar.url}" width="100" height="100" '
+            'style="object-fit: cover;" />'
+        )
 
 
 @admin.register(Subscription)
@@ -159,8 +157,8 @@ class TagAdmin(admin.ModelAdmin):
         )
 
     @admin.display(description="Рецепты")
-    def recipes_count(self, obj):
-        return obj.recipes_count
+    def recipes_count(self, tag):
+        return tag.recipes_count
 
 
 @admin.register(Ingredient)
@@ -254,31 +252,26 @@ class RecipeAdmin(admin.ModelAdmin):
         if not recipe.image:
             return "-"
         return (
-            f'<a href="{recipe.image.url}" target="_blank">'
             f'<img src="{recipe.image.url}" width="100" height="100" '
             'style="object-fit: cover;" />'
-            "</a>"
         )
 
     @admin.display(description="Ингредиенты")
     @mark_safe
     def ingredients_list(self, recipe):
         return "<br>".join(
-            [
-                f"{recipe_ingredient.ingredient.name} - "
-                f"{recipe_ingredient.amount} "
-                f"{recipe_ingredient.ingredient.measurement_unit}"
-                for recipe_ingredient in recipe.recipeingredients.select_related(
-                    "ingredient"
-                )
-            ]
+            f"{recipe_ingredient.ingredient.name} - "
+            f"{recipe_ingredient.amount} "
+            f"{recipe_ingredient.ingredient.measurement_unit}"
+            for recipe_ingredient in recipe.recipeingredients.select_related(
+                "ingredient"
+            )
         )
 
     @admin.display(description="Теги")
     @mark_safe
     def tags_list(self, recipe):
-        tags = recipe.tags.all()
-        return "<br>".join([tag.name for tag in tags])
+        return "<br>".join([tag.name for tag in recipe.tags.all()])
 
 
 @admin.register(ShoppingCart)
