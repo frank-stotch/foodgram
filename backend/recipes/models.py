@@ -37,6 +37,7 @@ class VerboseName:
     SUBSCRIBER = "Подписчик"
     SUBSCRIPTION = "Подписка"
     USER = "Пользователь"
+    RECIPE_INGREDIENT = "Продукт рецепта"
 
 
 class VerboseNamePlural:
@@ -47,6 +48,7 @@ class VerboseNamePlural:
     SHOPPING_CARTS = "Корзины покупок"
     SUBSCRIPTIONS = "Подписки"
     USERS = "Пользователи"
+    RECIPE_INGREDIENTS = "Продукты рецепта"
 
 
 class FieldLength:
@@ -257,6 +259,8 @@ class RecipeIngredient(models.Model):
                 fields=("recipe", "ingredient"), name="unique_%(class)s"
             ),
         )
+        verbose_name = VerboseName.RECIPE_INGREDIENT
+        verbose_name_plural = VerboseNamePlural.RECIPE_INGREDIENTS
 
     def __str__(self) -> str:
         return f"Ингредиент {self.ingredient} для рецепта {self.recipe}"
