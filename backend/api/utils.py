@@ -7,9 +7,9 @@ TIME_FORMAT = "%d-%m-%Y %H:%M"
 def make_shopping_cart_file(ingredients, recipes):
     current_time = timezone.now().strftime(TIME_FORMAT)
     ingredients = [
-        f"{index}. {item['ingredient__name'].capitalize()}. "
-        f"Мера: {item['amount']}. "
-        f"Ед. изм.: {item['ingredient__measurement_unit']}."
+        f"{index}. {item['ingredient__name'].capitalize()}, "
+        f"{item['ingredient__measurement_unit']}, "
+        f"{item['amount']}"
         for index, item in enumerate(ingredients, start=1)
     ]
     recipes = [
@@ -25,5 +25,5 @@ def make_shopping_cart_file(ingredients, recipes):
             "",
             "Список рецептов:",
             *recipes,
-        ],
+        ]
     )
