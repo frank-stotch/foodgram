@@ -2,7 +2,7 @@ from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import Group
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from rest_framework.authtoken.models import TokenProxy
@@ -34,13 +34,12 @@ class HasRecipesFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, user_queryset):
-        if not self.value():
+        value = self.value()
+        if not value:
             return user_queryset
-        return user_queryset.filter(
-            Q(recipes_count__gt=0)
-            if self.value() == "yes"
-            else Q(recipes_count=0)
-        )
+        if value == "yes":
+            return user_queryset.filter(recipes_count__gt=0)
+        return user_queryset.filter(recipes_count=0)
 
 
 class HasSubscriptionsFilter(admin.SimpleListFilter):
@@ -54,13 +53,12 @@ class HasSubscriptionsFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, user_queryset):
-        if not self.value():
+        value = self.value()
+        if not value:
             return user_queryset
-        return user_queryset.filter(
-            Q(subscriptions_count__gt=0)
-            if self.value() == "yes"
-            else Q(subscriptions_count=0)
-        )
+        if value == "yes":
+            return user_queryset.filter(subscriptions_count__gt=0)
+        return user_queryset.filter(subscriptions_count=0)
 
 
 class HasSubscribersFilter(admin.SimpleListFilter):
@@ -74,13 +72,12 @@ class HasSubscribersFilter(admin.SimpleListFilter):
         )
 
     def queryset(self, request, user_queryset):
-        if not self.value():
+        value = self.value()
+        if not value:
             return user_queryset
-        return user_queryset.filter(
-            Q(subscribers_count__gt=0)
-            if self.value() == "yes"
-            else Q(subscribers_count=0)
-        )
+        if value == "yes":
+            return user_queryset.filter(subscribers_count__gt=0)
+        return user_queryset.filter(subscribers_count=0)
 
 
 @admin.register(User)
@@ -135,7 +132,7 @@ class UserAdmin(BaseUserAdmin):
         url = reverse("admin:recipes_recipe_changelist")
         return (
             f'<a href="{url}?author__id__exact={user.id}">'
-            f'{user.recipes_count}</a>'
+            f"{user.recipes_count}</a>"
         )
 
     @admin.display(description="Аватар")
@@ -192,9 +189,15 @@ class IngredientAdmin(admin.ModelAdmin):
         return ingredient.recipes_count
 
 
-class RecipeIngredientInLine(admin.TabularInline):
+class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
-    min_num = 1
+    extra = 1
+    fields = ("ingredient", "amount", "get_measurement_unit")
+    readonly_fields = ("get_measurement_unit",)
+
+    @admin.display(description="Ед. изм.")
+    def get_measurement_unit(self, recipe):
+        return recipe.ingredient.measurement_unit
 
 
 class ImageWidget(forms.ClearableFileInput):
@@ -243,7 +246,7 @@ class RecipeAdmin(admin.ModelAdmin):
         ("author", admin.RelatedOnlyFieldListFilter),
     )
     search_fields = ("name", "tags__name", "ingredients__name")
-    inlines = (RecipeIngredientInLine,)
+    inlines = (RecipeIngredientInline,)
 
     def get_queryset(self, request):
         return (
@@ -285,16 +288,22 @@ class RecipeAdmin(admin.ModelAdmin):
     @admin.display(description="Теги")
     @mark_safe
     def tags_list(self, recipe):
-        return "<br>".join([tag.name for tag in recipe.tags.all()])
+        return "<br>".join(tag.name for tag in recipe.tags.all())
 
 
 @admin.register(ShoppingCart)
 class ShoppingCartAdmin(admin.ModelAdmin):
     list_display = ("user", "recipe")
-    list_filter = list_display
+    list_filter = (
+        ("user", admin.RelatedOnlyFieldListFilter),
+        ("recipe", admin.RelatedOnlyFieldListFilter),
+    )
 
 
 @admin.register(Favorite)
 class FavoriteAdmin(admin.ModelAdmin):
     list_display = ("user", "recipe")
-    list_filter = list_display
+    list_filter = (
+        ("user", admin.RelatedOnlyFieldListFilter),
+        ("recipe", admin.RelatedOnlyFieldListFilter),
+    )
