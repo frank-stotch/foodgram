@@ -192,16 +192,12 @@ class WriteRecipeSerializer(serializers.ModelSerializer):
 
     @transaction.atomic
     def update(self, recipe, validated_data):
-        new_ingredients = validated_data.pop("ingredients", None)
-        if not new_ingredients:
-            raise serializers.ValidationError(
-                {"ingredients": Error.NO_INGREDIENTS}
-            )
-        tags = validated_data.pop("tags", None)
-        if not tags:
-            raise serializers.ValidationError({"tags": Error.NO_TAGS})
-        recipe.ingredients.clear()
-        self._save_ingredients(recipe, new_ingredients)
+        try:
+            new_ingredients = validated_data.pop("ingredients")
+            recipe.ingredients.clear()
+            self._save_ingredients(recipe, new_ingredients)
+        except KeyError:
+            pass
         return super().update(recipe, validated_data)
 
     def to_representation(self, recipe):
