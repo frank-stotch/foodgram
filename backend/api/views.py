@@ -150,7 +150,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action(detail=False)
     def download_shopping_cart(self, request):
-        shopping_cart = (
+        ingredients = (
             RecipeIngredient.objects.filter(
                 recipe__shoppingcarts__user=request.user
             )
@@ -162,11 +162,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             .annotate(amount=Sum("amount"))
             .order_by("ingredient__name")
         )
-        unique_recipes = (
-            request.user.shoppingcarts.select_related("recipe").distinct()
-        )
+        recipes = Recipe.objects.filter(
+            shoppingcarts__user=request.user
+        ).distinct()
         return FileResponse(
-            utils.make_shopping_cart_file(shopping_cart, unique_recipes),
+            utils.make_shopping_cart_file(ingredients, recipes),
             as_attachment=True,
             filename="shopping_cart.txt",
             content_type="text/plain",
