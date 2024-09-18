@@ -14,7 +14,7 @@ class Command(BaseCommand):
         with open(PATH_JSON, "r", encoding="utf-8") as file:
             data = json.load(file)
             Ingredient.objects.bulk_create(
-                [Ingredient(**ingredient) for ingredient in data],
+                (Ingredient(**ingredient) for ingredient in data),
                 ignore_conflicts=True,
             )
         self.stdout.write(self.style.SUCCESS("Data imported successfully"))

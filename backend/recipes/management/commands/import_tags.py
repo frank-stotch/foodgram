@@ -13,6 +13,6 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         with open(PATH_CSV, 'r', encoding='utf-8') as file:
             csv_reader = csv.DictReader(file)
-            Tag.objects.bulk_create([Tag(**tag) for tag in csv_reader],
+            Tag.objects.bulk_create((Tag(**tag) for tag in csv_reader),
                                     ignore_conflicts=True)
         self.stdout.write(self.style.SUCCESS('Data imported successfully'))

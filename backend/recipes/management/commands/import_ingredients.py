@@ -14,7 +14,7 @@ class Command(BaseCommand):
         with open(PATH_CSV, "r", encoding="utf-8") as file:
             csv_reader = csv.DictReader(file)
             Ingredient.objects.bulk_create(
-                [Ingredient(**row) for row in csv_reader],
+                (Ingredient(**row) for row in csv_reader),
                 ignore_conflicts=True,
             )
         self.stdout.write(self.style.SUCCESS("Data imported successfully"))
