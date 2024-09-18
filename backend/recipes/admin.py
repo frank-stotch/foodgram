@@ -192,12 +192,7 @@ class IngredientAdmin(admin.ModelAdmin):
 class RecipeIngredientInline(admin.TabularInline):
     model = RecipeIngredient
     extra = 1
-    fields = ("ingredient", "amount", "get_measurement_unit")
-    readonly_fields = ("get_measurement_unit",)
-
-    @admin.display(description="Ед. изм.")
-    def get_measurement_unit(self, recipe):
-        return recipe.ingredient.measurement_unit
+    fields = ("ingredient", "amount")
 
 
 class ImageWidget(forms.ClearableFileInput):
