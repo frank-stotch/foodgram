@@ -272,9 +272,9 @@ class RecipeAdmin(admin.ModelAdmin):
     @mark_safe
     def ingredients_list(self, recipe):
         return "<br>".join(
-            f"{recipe_ingredient.ingredient.name} - "
-            f"{recipe_ingredient.amount} "
-            f"{recipe_ingredient.ingredient.measurement_unit}"
+            f"{recipe_ingredient.ingredient.name} "
+            f"({recipe_ingredient.ingredient.measurement_unit}) - "
+            f"{recipe_ingredient.amount}"
             for recipe_ingredient in recipe.recipeingredients.select_related(
                 "ingredient"
             )
